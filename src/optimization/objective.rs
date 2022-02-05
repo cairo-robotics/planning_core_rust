@@ -212,7 +212,7 @@ impl ObjectiveTrait for JointLimits {
 pub struct MinimizeVelocity;
 impl ObjectiveTrait for MinimizeVelocity {
     fn call(&self, x: &[f64], v: &vars::AgentVars, frames: &Vec<(Vec<nalgebra::Vector3<f64>>, Vec<nalgebra::UnitQuaternion<f64>>)>) -> f64 {
-        let mut x_val = 0.0;
+        let mut x_val: f64 = 0.0;
         for i in 0..x.len() {
            x_val += (x[i] - v.xopt[i]).powi(2);
         }
@@ -221,7 +221,7 @@ impl ObjectiveTrait for MinimizeVelocity {
     }
 
     fn call_lite(&self, x: &[f64], v: &vars::AgentVars, ee_poses: &Vec<(nalgebra::Vector3<f64>, nalgebra::UnitQuaternion<f64>)>) -> f64 {
-        let mut x_val = 0.0;
+        let mut x_val: f64 = 0.0;
         for i in 0..x.len() {
            x_val += (x[i] - v.xopt[i]).powi(2);
         }
@@ -234,7 +234,7 @@ impl ObjectiveTrait for MinimizeVelocity {
 pub struct MinimizeAcceleration;
 impl ObjectiveTrait for MinimizeAcceleration {
     fn call(&self, x: &[f64], v: &vars::AgentVars, frames: &Vec<(Vec<nalgebra::Vector3<f64>>, Vec<nalgebra::UnitQuaternion<f64>>)>) -> f64 {
-        let mut x_val = 0.0;
+        let mut x_val: f64 = 0.0;
         for i in 0..x.len() {
             let v1 = x[i] - v.xopt[i];
             let v2 = v.xopt[i] - v.prev_state[i];
@@ -245,7 +245,7 @@ impl ObjectiveTrait for MinimizeAcceleration {
     }
 
     fn call_lite(&self, x: &[f64], v: &vars::AgentVars, ee_poses: &Vec<(nalgebra::Vector3<f64>, nalgebra::UnitQuaternion<f64>)>) -> f64 {
-        let mut x_val = 0.0;
+        let mut x_val: f64 = 0.0;
         for i in 0..x.len() {
             let v1 = x[i] - v.xopt[i];
             let v2 = v.xopt[i] - v.prev_state[i];
@@ -259,7 +259,7 @@ impl ObjectiveTrait for MinimizeAcceleration {
 pub struct MinimizeJerk;
 impl ObjectiveTrait for MinimizeJerk {
     fn call(&self, x: &[f64], v: &vars::AgentVars, frames: &Vec<(Vec<nalgebra::Vector3<f64>>, Vec<nalgebra::UnitQuaternion<f64>>)>) -> f64 {
-        let mut x_val = 0.0;
+        let mut x_val: f64 = 0.0;
         for i in 0..x.len() {
             let v1 = x[i] - v.xopt[i];
             let v2 = v.xopt[i] - v.prev_state[i];
@@ -273,7 +273,7 @@ impl ObjectiveTrait for MinimizeJerk {
     }
 
     fn call_lite(&self, x: &[f64], v: &vars::AgentVars, ee_poses: &Vec<(nalgebra::Vector3<f64>, nalgebra::UnitQuaternion<f64>)>) -> f64 {
-        let mut x_val = 0.0;
+        let mut x_val: f64 = 0.0;
         for i in 0..x.len() {
             let v1 = x[i] - v.xopt[i];
             let v2 = v.xopt[i] - v.prev_state[i];

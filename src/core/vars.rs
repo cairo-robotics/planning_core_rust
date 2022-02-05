@@ -11,28 +11,27 @@ use ncollide3d::shape::{*};
 use time::PreciseTime;
 use std::ops::Deref;
 
-#[derive(Clone, Debug)]
-pub struct Vars {
-    pub init_state: Vec<f64>,
-    pub xopt: Vec<f64>,
-    pub prev_state: Vec<f64>,
-    pub prev_state2: Vec<f64>,
-    pub prev_state3: Vec<f64>
-}
-impl Vars {
-    pub fn new(init_state: Vec<f64>) -> Self {
-        Vars{init_state: init_state.clone(), xopt: init_state.clone(), prev_state: init_state.clone(),
-            prev_state2: init_state.clone(), prev_state3: init_state.clone()}
-    }
+// #[derive(Clone, Debug)]
+// pub struct Vars {
+//     pub init_state: Vec<f64>,
+//     pub xopt: Vec<f64>,
+//     pub prev_state: Vec<f64>,
+//     pub prev_state2: Vec<f64>,
+//     pub prev_state3: Vec<f64>
+// }
+// impl Vars {
+//     pub fn new(init_state: Vec<f64>) -> Self {
+//         Vars{init_state: init_state.clone(), xopt: init_state.clone(), prev_state: init_state.clone(),
+//             prev_state2: init_state.clone(), prev_state3: init_state.clone()}
+//     }
 
-    pub fn update(&mut self, xopt: Vec<f64>) {
-        self.prev_state3 = self.prev_state2.clone();
-        self.prev_state2 = self.prev_state.clone();
-        self.prev_state = self.xopt.clone();
-        self.xopt = xopt.clone();
-    }
-}
-
+//     pub fn update(&mut self, xopt: Vec<f64>) {
+//         self.prev_state3 = self.prev_state2.clone();
+//         self.prev_state2 = self.prev_state.clone();
+//         self.prev_state = self.xopt.clone();
+//         self.xopt = xopt.clone();
+//     }
+// }
 
 pub struct AgentVars {
     pub robot: Robot,
@@ -52,7 +51,9 @@ pub struct AgentVars {
     pub env_collision: RelaxedIKEnvCollision,
     pub objective_mode: String
 }
+
 impl AgentVars {
+
     pub fn from_yaml_path(fp: String, position_mode_relative: bool, rotation_mode_relative: bool) -> Self {
         let ifp = InfoFileParser::from_yaml_path(fp.clone());
         let mut robot = Robot::from_yaml_path(fp.clone());
