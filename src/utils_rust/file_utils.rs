@@ -8,12 +8,7 @@ use path_slash::PathBufExt;
 pub fn get_path_to_src() -> String {
     let path = env::current_dir().unwrap();
     let s = path.to_slash().unwrap();
-    let s1 = String::from(s);
-    let path_to_src = s1 + "/../";
-    // let path_to_src = s1;
-    println!("\n\n\n");
-    println!("{}", path_to_src);
-    println!("\n\n\n");
+    let path_to_src = String::from(s);
     path_to_src
 }
 

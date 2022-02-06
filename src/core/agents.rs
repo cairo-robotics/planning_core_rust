@@ -23,6 +23,7 @@ impl Agent {
     fn new(fp: String, position_mode_relative: bool, rotation_mode_relative: bool) -> Agent {
         let ifp = InfoFileParser::from_yaml_path(fp.clone());
         println!("{:?}", ifp.joint_names);
+        println!("{}", get_path_to_src());
         let mut robot = Robot::from_yaml_path(fp.clone());
         let num_chains = ifp.joint_names.len();
         let sampler = ThreadRobotSampler::new(robot.clone());
@@ -37,11 +38,11 @@ impl Agent {
             goal_positions.push(init_ee_positions[i]);
             goal_quats.push(init_ee_quats[i]);
         }
-
-        let collision_nn_path = get_path_to_src()+ "relaxed_ik_core/config/collision_nn_rust/" + ifp.collision_nn_file.as_str() + ".yaml";
+        
+        let collision_nn_path = get_path_to_src()+ "/config/collision_nn_rust/" + ifp.collision_nn_file.as_str() + ".yaml";
         let collision_nn = CollisionNN::from_yaml_path(collision_nn_path);
 
-        let fp = get_path_to_src() + "relaxed_ik_core/config/settings.yaml";
+        let fp = get_path_to_src() + "/config/settings.yaml";
         let fp2 = fp.clone();
         println!("AgentVars from_yaml_path {}", fp);
         let env_collision_file = EnvCollisionFileParser::from_yaml_path(fp);
@@ -56,13 +57,13 @@ impl Agent {
         return Agent { agent_vars };
     }
 
-    fn get_pose(&mut self, j_config: Vec<f64>) -> PyResult<Vec<Vec<f64>>> {
+    fn forward_kinematics(&mut self, j_config: Vec<f64>) -> PyResult<Vec<Vec<f64>>> {
         let args: &[f64] = j_config.as_slice();
         let ee_poses: Vec<(nalgebra::Vector3<f64>, nalgebra::UnitQuaternion<f64>)> = self.agent_vars.robot.get_ee_pos_and_quat_immutable(args);
        
  
-        let position_end_chain= ee_poses[self.agent_vars.robot.num_chains].0;
-        let quat_chain = ee_poses[self.agent_vars.robot.num_chains].1.clone().into_inner();
+        let position_end_chain= ee_poses[0].0;
+        let quat_chain = ee_poses[0].1.clone().into_inner();
         let mut ee_position = Vec::new();
         ee_position.push(position_end_chain.x);
         ee_position.push(position_end_chain.y);
