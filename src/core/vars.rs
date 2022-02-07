@@ -49,7 +49,8 @@ pub struct AgentVars {
     pub rotation_mode_relative: bool, // if false, will be absolute
     pub collision_nn: CollisionNN,
     pub env_collision: RelaxedIKEnvCollision,
-    pub objective_mode: String
+    pub objective_mode: String,
+    pub keyframe_mean: Vec<f64>
 }
 
 impl AgentVars {
@@ -71,12 +72,11 @@ impl AgentVars {
             goal_quats.push(init_ee_quats[i]);
         }
 
-        let collision_nn_path = get_path_to_src()+ "relaxed_ik_core/config/collision_nn_rust/" + ifp.collision_nn_file.as_str() + ".yaml";
+        let collision_nn_path = get_path_to_src()+ "/config/collision_nn_rust/" + ifp.collision_nn_file.as_str() + ".yaml";
         let collision_nn = CollisionNN::from_yaml_path(collision_nn_path);
 
-        let fp = get_path_to_src() + "relaxed_ik_core/config/settings.yaml";
+        let fp = get_path_to_src() + "/config/settings.yaml";
         let fp2 = fp.clone();
-        println!("AgentVars from_yaml_path {}", fp);
         let env_collision_file = EnvCollisionFileParser::from_yaml_path(fp);
         let frames = robot.get_frames_immutable(&ifp.starting_config.clone());
         let env_collision = RelaxedIKEnvCollision::init_collision_world(env_collision_file, &frames);
@@ -85,7 +85,11 @@ impl AgentVars {
         AgentVars{robot, sampler, init_state: ifp.starting_config.clone(), xopt: ifp.starting_config.clone(),
             prev_state: ifp.starting_config.clone(), prev_state2: ifp.starting_config.clone(), prev_state3: ifp.starting_config.clone(),
             goal_positions, goal_quats, init_ee_positions, init_ee_quats, position_mode_relative, rotation_mode_relative, collision_nn, 
-            env_collision, objective_mode}
+            env_collision, objective_mode, keyframe_mean: ifp.starting_config.clone()}
+    }
+
+    pub fn update_keyframe_mean(&mut self, mean_configuration: Vec<f64>) {
+        self.keyframe_mean = mean_configuration.clone();
     }
 
     pub fn update(&mut self, xopt: Vec<f64>) {

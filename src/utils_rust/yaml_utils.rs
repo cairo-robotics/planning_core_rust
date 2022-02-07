@@ -9,11 +9,9 @@ use std::path::Path;
 use std::io;
 
 pub fn get_yaml_obj(fp: String) -> Vec<Yaml> {
-    println!("{}", fp.as_str());
     let mut file = File::open(fp.as_str()).unwrap();
     let mut contents = String::new();
     let res = file.read_to_string(&mut contents).unwrap();
-
     let docs = YamlLoader::load_from_str(contents.as_str()).unwrap();
     docs
 }

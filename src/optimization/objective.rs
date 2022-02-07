@@ -1,21 +1,12 @@
-use crate::core::{vars, tools};
+use crate::core::{vars};
 use crate::collision::env_collision::{*};
 use crate::utils_rust::transformations::{*};
-use nalgebra::geometry::{Translation3, UnitQuaternion, Quaternion};
-use std::cmp;
-use crate::core::vars::AgentVars;
-use nalgebra::{Vector3, Isometry3, Point3};
-use ncollide3d::{shape, query, pipeline};
+use crate::optimization::loss::{groove_loss, groove_loss_derivative};
+use nalgebra::geometry::{UnitQuaternion, Quaternion};
+use nalgebra::{Point3};
+use ncollide3d::{shape, query};
 use std::ops::Deref;
-use time::PreciseTime;
 
-pub fn groove_loss(x_val: f64, t: f64, d: i32, c: f64, f: f64, g: i32) -> f64 {
-    -( (-(x_val - t).powi(d)) / (2.0 * c.powi(2) ) ).exp() + f * (x_val - t).powi(g)
-}
-
-pub fn groove_loss_derivative(x_val: f64, t: f64, d: i32, c: f64, f: f64, g: i32) -> f64 {
-    -( (-(x_val - t).powi(d)) / (2.0 * c.powi(2) ) ).exp() *  ((-d as f64 * (x_val - t)) /  (2.0 * c.powi(2))) + g as f64 * f * (x_val - t)
-}
 
 pub trait ObjectiveTrait {
     fn call(&self, x: &[f64], v: &vars::AgentVars, frames: &Vec<(Vec<nalgebra::Vector3<f64>>, Vec<nalgebra::UnitQuaternion<f64>>)>) -> f64;
@@ -283,6 +274,29 @@ impl ObjectiveTrait for MinimizeJerk {
             x_val += (a1 - a2).powi(2);
         }
         x_val = x_val.sqrt();
+        groove_loss(x_val, 0.0, 2, 0.1, 10.0, 2)
+    }
+}
+
+pub struct MinimizeDistanceKeyframeMean;
+impl ObjectiveTrait for MinimizeDistanceKeyframeMean {
+    fn call(&self, x: &[f64], v: &vars::AgentVars, frames: &Vec<(Vec<nalgebra::Vector3<f64>>, Vec<nalgebra::UnitQuaternion<f64>>)>) -> f64 {
+        let mut sum: f64 = 0.0;
+        for i in 0..x.len() {
+            let abs_diff = (x[i] - v.keyframe_mean[i]).abs();
+            sum += abs_diff;
+        }
+        let x_val = sum.sqrt();
+        groove_loss(x_val, 0.0, 2, 0.1, 10.0, 2)
+    }
+
+    fn call_lite(&self, x: &[f64], v: &vars::AgentVars, ee_poses: &Vec<(nalgebra::Vector3<f64>, nalgebra::UnitQuaternion<f64>)>) -> f64 {
+        let mut sum: f64 = 0.0;
+        for i in 0..x.len() {
+            let abs_diff = (x[i] - v.keyframe_mean[i]).abs();
+            sum += abs_diff;
+        }
+        let x_val = sum.sqrt();
         groove_loss(x_val, 0.0, 2, 0.1, 10.0, 2)
     }
 }
