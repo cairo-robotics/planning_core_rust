@@ -5,4 +5,3 @@ pub mod spacetime;
 pub mod collision;
 pub mod core;
 pub mod optimization;
-pub mod agent;
