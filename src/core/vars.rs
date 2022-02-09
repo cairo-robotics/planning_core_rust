@@ -72,10 +72,10 @@ impl AgentVars {
             goal_quats.push(init_ee_quats[i]);
         }
 
-        let collision_nn_path = get_path_to_src()+ "/config/collision_nn_rust/" + ifp.collision_nn_file.as_str() + ".yaml";
+        let collision_nn_path = get_path_to_config()+ "/collision_nn_rust/" + ifp.collision_nn_file.as_str() + ".yaml";
         let collision_nn = CollisionNN::from_yaml_path(collision_nn_path);
 
-        let fp = get_path_to_src() + "/config/settings.yaml";
+        let fp = get_path_to_config() + "/settings.yaml";
         let fp2 = fp.clone();
         let env_collision_file = EnvCollisionFileParser::from_yaml_path(fp);
         let frames = robot.get_frames_immutable(&ifp.starting_config.clone());

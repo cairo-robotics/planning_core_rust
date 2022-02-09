@@ -20,8 +20,8 @@ pub struct OmegaProjection {
 
 impl OmegaProjection {
     pub fn from_info_file_name(info_file_name: String, mode: usize) -> Self {
-        let path_to_src = get_path_to_src();
-        let fp = path_to_src + "/config/info_files/" + info_file_name.as_str();
+        let path_to_src = get_path_to_config();
+        let fp = path_to_src + "/info_files/" + info_file_name.as_str();
         OmegaProjection::from_yaml_path(fp.clone(), mode.clone())
     }
 
@@ -39,8 +39,8 @@ impl OmegaProjection {
     }
 
     pub fn from_loaded(mode: usize) -> Self {
-        let path_to_src = get_path_to_src();
-        let fp1 = path_to_src +  "/config/settings.yaml";
+        let path_to_src = get_path_to_config();
+        let fp1 = path_to_src +  "/settings.yaml";
         let info_file_name = get_info_file_name(fp1);
         OmegaProjection::from_info_file_name(info_file_name.clone(), mode.clone())
     }

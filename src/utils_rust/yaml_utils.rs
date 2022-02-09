@@ -397,7 +397,7 @@ impl EnvCollisionFileParser {
                 let rz = rots[2].as_f64().unwrap();
 
                 let mut points: Vec<SphereEnv> = Vec::new();
-                let path_to_src_str = get_path_to_src();
+                let path_to_src_str = get_path_to_config();
                 let path_to_src = Path::new(&path_to_src_str);
                 let point_cloud_file_name = point_cloud_list[i]["file"].as_str().unwrap();
                 let point_cloud_path = path_to_src.join(Path::new("geometry_files")).join(Path::new(point_cloud_file_name));

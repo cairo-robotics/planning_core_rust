@@ -1,7 +1,7 @@
 
 use crate::spacetime::robot::Robot;
 use crate::utils_rust::yaml_utils::{RobotCollisionSpecFileParser, InfoFileParser};
-use crate::utils_rust::file_utils::get_path_to_src;
+use crate::utils_rust::file_utils::get_path_to_config;
 use crate::utils_rust::collision_object::CollisionObject;
 use crate::utils_rust::transformations;
 use nalgebra::{UnitQuaternion, Vector3, UnitComplex};
@@ -130,14 +130,14 @@ impl RobotShapeModel {
         let robot = Robot::from_yaml_path(fp.clone());
         let ifp = InfoFileParser::from_yaml_path(fp.clone());
         let collision_file_name = ifp.collision_file_name;
-        let fp2 = get_path_to_src() + "RelaxedIK/Config/collision_files_rust/" + collision_file_name.as_str();
+        let fp2 = get_path_to_config() + "/collision_files_rust/" + collision_file_name.as_str();
         let robot_collision_specs_file = RobotCollisionSpecFileParser::from_yaml_path(fp2.clone());
         RobotShapeModel::from_robot_and_specs(&robot, &robot_collision_specs_file, &ifp.starting_config)
     }
 
     pub fn from_info_file_name(info_file_name: String) -> Self {
-         let path_to_src = get_path_to_src();
-         let fp = path_to_src + "RelaxedIK/Config/info_files/" + info_file_name.as_str();
+         let path_to_src = get_path_to_config();
+         let fp = path_to_src + "/info_files/" + info_file_name.as_str();
          RobotShapeModel::from_yaml_path(fp)
      }
 

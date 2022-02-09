@@ -2,14 +2,21 @@ use std::env;
 use std::fs::File;
 use std::io::prelude::*;
 use std::fs::read_dir;
-
 use path_slash::PathBufExt;
 
-pub fn get_path_to_src() -> String {
+pub fn get_path_of_exec() -> String {
     let path = env::current_dir().unwrap();
     let s = path.to_slash().unwrap();
-    let path_to_src = String::from(s);
-    path_to_src
+    let s1 = String::from(s);
+    let path_of_exec = s1 + "/../";
+    path_of_exec
+}
+
+pub fn get_path_to_config() -> String {
+    let key = "config_path";
+    let path_to_src = env::var(key).unwrap_or_else(|_e| {get_path_of_exec()});
+    println!{"{}", path_to_src};
+    path_to_src    
 }
 
 pub fn get_file_contents(fp: String) -> String {
