@@ -42,7 +42,7 @@ impl RelaxedIK {
     }
 
     pub fn from_yaml_path(fp: String, mode: usize) -> Self {
-        let vars = AgentVars::from_yaml_path(fp.clone(), true, true);
+        let vars = AgentVars::from_yaml_path(fp.clone(), false, false);
         let mut om = ObjectiveMaster::relaxed_ik(vars.robot.num_chains, vars.objective_mode.clone());
         if mode == 0 {
             om = ObjectiveMaster::standard_ik(vars.robot.num_chains);
@@ -56,7 +56,7 @@ impl RelaxedIK {
 
     pub fn from_loaded(mode: usize) -> Self {
         let path_to_src = get_path_to_config();
-        let fp1 = path_to_src +  "/settings.yaml";
+        let fp1 = path_to_src + "/settings.yaml";
         let info_file_name = get_info_file_name(fp1);
         RelaxedIK::from_info_file_name(info_file_name.clone(), mode.clone())
     }

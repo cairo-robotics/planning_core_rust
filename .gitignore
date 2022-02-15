@@ -16,6 +16,6 @@ Cargo.lock
 # Virtual Environments for Python
 .venv
 
-*.so
+.so
 
 */__pycache__/
