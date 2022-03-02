@@ -1,5 +1,4 @@
 use nalgebra::geometry::Isometry3;
-use nalgebra::norm;
 use std::f32::consts::PI;
 
 pub struct TSR {
@@ -9,7 +8,7 @@ pub struct TSR {
 }
 
 
-pub fn distanceToTSR(T0_s: &Isometry3<f64>, tsr: &TSR){
+pub fn distanceToTSR(T0_s: &Isometry3<f64>, tsr: &TSR) -> (f64, Vec<f64>) {
     // pose of the grasp location or the pose of the object held by the hand in world coordinates
     let T0_sp = T0_s * tsr.Tw_e.inverse();
     // T0_sp in terms of the coordinates of the target frame w given by the Task Space Region tsr.
@@ -27,9 +26,11 @@ pub fn distanceToTSR(T0_s: &Isometry3<f64>, tsr: &TSR){
     }
     let distances = Vec::new();
     for delta in deltas {
-        distances.push(norm(&delta))
+        distances.push(l2_norm(delta.as_slice()))
     }
-    return min(distances), deltas[distances.index(min(distances))]
+    let min_dist = distances.into_iter().reduce(f64::min).unwrap();
+    let index = distances.iter().position(|&r| r == min_dist).unwrap();
+    return (min_dist, deltas[index])
 }
 
 pub fn displacement(T0_s: &Isometry3<f64>) -> Vec<f64>{
@@ -80,7 +81,6 @@ pub fn delta_x(displacement: &[f64], bounds: &[Vec<f64>]) -> Vec<f64>{
     delta
 }
 
-    
 
 pub fn partial_cartesian(a: Vec<Vec<f64>>, b: &[f64]) -> Vec<Vec<f64>> {
     a.into_iter().flat_map(|xs| {
@@ -106,3 +106,11 @@ pub fn cartesian_product(lists: &[&[f64]]) -> Vec<Vec<f64>> {
             }
         }
     }
+
+pub fn l2_norm(vec: &[f64]) -> f64 {
+    let sum = 0.0;
+    for i in 0..vec.len(){
+        sum += f64::powi(vec[i], 2);
+    }
+    sum.sqrt()
+}
