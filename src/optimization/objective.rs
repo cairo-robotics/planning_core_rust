@@ -92,6 +92,7 @@ impl ObjectiveTrait for MatchEEQuatGoals {
     }
 }
 
+
 pub struct NNSelfCollision;
 impl ObjectiveTrait for NNSelfCollision {
     fn call(&self, x: &[f64], v: &vars::AgentVars, frames: &Vec<(Vec<nalgebra::Vector3<f64>>, Vec<nalgebra::UnitQuaternion<f64>>)>) -> f64 {
@@ -283,8 +284,8 @@ impl ObjectiveTrait for MinimizeDistanceKeyframeMean {
     fn call(&self, x: &[f64], v: &vars::AgentVars, frames: &Vec<(Vec<nalgebra::Vector3<f64>>, Vec<nalgebra::UnitQuaternion<f64>>)>) -> f64 {
         let mut sum: f64 = 0.0;
         for i in 0..x.len() {
-            let abs_diff = (x[i] - v.keyframe_mean[i]).abs();
-            sum += abs_diff;
+            let diff = x[i] - v.keyframe_mean[i];
+            sum += diff.powi(2);
         }
         let x_val = sum.sqrt();
         groove_loss(x_val, 0.0, 2, 0.1, 10.0, 2)
@@ -293,8 +294,37 @@ impl ObjectiveTrait for MinimizeDistanceKeyframeMean {
     fn call_lite(&self, x: &[f64], v: &vars::AgentVars, ee_poses: &Vec<(nalgebra::Vector3<f64>, nalgebra::UnitQuaternion<f64>)>) -> f64 {
         let mut sum: f64 = 0.0;
         for i in 0..x.len() {
-            let abs_diff = (x[i] - v.keyframe_mean[i]).abs();
-            sum += abs_diff;
+            let diff = x[i] - v.keyframe_mean[i];
+            sum += diff.powi(2);
+        }
+        let x_val = sum.sqrt();
+        groove_loss(x_val, 0.0, 2, 0.1, 10.0, 2)
+    }
+}
+
+pub struct TSRError{
+    pub arm_idx: usize
+}
+
+impl ObjectiveTrait for TSRError {
+    fn call(&self, x: &[f64], v: &vars::AgentVars, frames: &Vec<(Vec<nalgebra::Vector3<f64>>, Vec<nalgebra::UnitQuaternion<f64>>)>) -> f64 {
+        let last_elem = frames[self.arm_idx].1.len() - 1;
+        let tmp = Quaternion::new(-frames[self.arm_idx].1[last_elem].w, -frames[self.arm_idx].1[last_elem].i, -frames[self.arm_idx].1[last_elem].j, -frames[self.arm_idx].1[last_elem].k);
+        let ee_quat2 = UnitQuaternion::from_quaternion(tmp);
+        let last_elem = frames[self.arm_idx].0.len() - 1;
+
+        // let disp = angle_between(v.goal_quats[self.arm_idx], frames[self.arm_idx].1[last_elem]);
+        // let disp2 = angle_between(v.goal_quats[self.arm_idx], ee_quat2);
+        // let x_val = disp.min(disp2);
+        
+        groove_loss(x_val, 0.0, 2, 0.1, 10.0, 2)
+    }
+
+    fn call_lite(&self, x: &[f64], v: &vars::AgentVars, ee_poses: &Vec<(nalgebra::Vector3<f64>, nalgebra::UnitQuaternion<f64>)>) -> f64 {
+        let mut sum: f64 = 0.0;
+        for i in 0..x.len() {
+            let diff = x[i] - v.keyframe_mean[i];
+            sum += diff.powi(2);
         }
         let x_val = sum.sqrt();
         groove_loss(x_val, 0.0, 2, 0.1, 10.0, 2)

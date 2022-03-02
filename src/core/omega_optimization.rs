@@ -11,18 +11,18 @@ use nalgebra::{Vector3, UnitQuaternion, Quaternion};
 use crate::utils_rust::sampler::ThreadSampler;
 
 
-pub struct OmegaProjection {
+pub struct OmegaOptimization {
     pub vars: AgentVars,
     pub om: ObjectiveMaster,
     pub groove: OptimizationEngineOpen,
     pub groove_nlopt: OptimizationEngineNLopt
 }
 
-impl OmegaProjection {
+impl OmegaOptimization {
     pub fn from_info_file_name(info_file_name: String, mode: usize) -> Self {
         let path_to_src = get_path_to_config();
         let fp = path_to_src + "/info_files/" + info_file_name.as_str();
-        OmegaProjection::from_yaml_path(fp.clone(), mode.clone())
+        OmegaOptimization::from_yaml_path(fp.clone(), mode.clone())
     }
 
     pub fn from_yaml_path(fp: String, mode: usize) -> Self {
@@ -42,7 +42,7 @@ impl OmegaProjection {
         let path_to_src = get_path_to_config();
         let fp1 = path_to_src +  "/settings.yaml";
         let info_file_name = get_info_file_name(fp1);
-        OmegaProjection::from_info_file_name(info_file_name.clone(), mode.clone())
+        OmegaOptimization::from_info_file_name(info_file_name.clone(), mode.clone())
     }
 
     pub fn solve(&mut self, ee_sub: &EEPoseGoalsSubscriber) -> Vec<f64> {
@@ -82,7 +82,7 @@ impl OmegaProjection {
         self.solve(&ee_sub)
     }
 
-    pub fn solve_precise(&mut self, ee_sub: &EEPoseGoalsSubscriber) -> (Vec<f64>) {
+    pub fn solve_precise(&mut self, ee_sub: &EEPoseGoalsSubscriber) -> Vec<f64> {
         let mut out_x = self.vars.xopt.clone();
 
         if self.vars.rotation_mode_relative {

@@ -58,7 +58,7 @@ impl AgentVars {
     pub fn from_yaml_path(fp: String, position_mode_relative: bool, rotation_mode_relative: bool) -> Self {
         let ifp = InfoFileParser::from_yaml_path(fp.clone());
         let mut robot = Robot::from_yaml_path(fp.clone());
-        let num_chains = ifp.joint_names.len();
+        let num_chains = robot.joint_names.len();
         let sampler = ThreadRobotSampler::new(robot.clone());
 
         let mut goal_positions: Vec<Vector3<f64>> = Vec::new();
