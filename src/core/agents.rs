@@ -7,6 +7,7 @@ use crate::collision::env_collision::*;
 use crate::core::vars::AgentVars;
 use crate::core::relaxed_ik::{RelaxedIK, Opt};
 use crate::core::omega_optimization::OmegaOptimization;
+use crate::optimization::tsr::TSR;
 use crate::spacetime::robot::Robot;
 use crate::utils_rust::file_utils::*;
 use crate::utils_rust::sampler::ThreadRobotSampler;
@@ -107,13 +108,18 @@ impl Agent {
         Ok(())
     }
 
+    fn update_tsr(&mut self, T0_w_pose: Vec<f64>, Tw_e_pose: Vec<f64>, Bw: Vec<Vec<f64>>) -> PyResult<()>{
+        self.agent_vars.tsr = TSR::new_from_poses(&T0_w_pose, &Tw_e_pose, &Bw);
+        Ok(())
+    }
+
     fn update_keyframe_mean(&mut self, config_vec: Vec<f64>) -> PyResult<()> {
         self.agent_vars.keyframe_mean = config_vec.clone();
         Ok(())
     }
 
     fn update_xopt(&mut self, best_guess_config_vec: Vec<f64>) -> PyResult<()> {
-        self.agent_vars.xopt = best_guess_config_vec.clone();
+        self.agent_vars.update(best_guess_config_vec);
         Ok(())
     }
 
@@ -174,6 +180,18 @@ fn init_agent_vars(settings_fp: String, position_mode_relative: bool, rotation_m
     let env_collision =
         RelaxedIKEnvCollision::init_collision_world(env_collision_file, &frames);
     let objective_mode = get_objective_mode(fp2);
+    let tsr = TSR::new_from_poses(
+        &vec![0.0f64, 0.0, 0.0, 0.0, 0.0, 0.0],
+        &vec![0.0f64, 0.0, 0.0, 0.0, 0.0, 0.0],
+        &vec![
+            vec![-100.0f64, 100.0],
+            vec![-100.0f64, 100.0],
+            vec![-100.0f64, 100.0],
+            vec![-3.14f64, 3.14],
+            vec![-3.14f64, 3.14],
+            vec![-3.14f64, 3.14],
+        ],
+    );
 
     let agent_vars = AgentVars {
         robot,
@@ -192,7 +210,8 @@ fn init_agent_vars(settings_fp: String, position_mode_relative: bool, rotation_m
         collision_nn,
         env_collision,
         objective_mode,
-        keyframe_mean: ifp.starting_config.clone()
+        keyframe_mean: ifp.starting_config.clone(),
+        tsr: tsr
     };
     agent_vars
 }

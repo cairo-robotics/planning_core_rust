@@ -106,6 +106,12 @@ impl ObjectiveMaster {
         Self{objectives, num_chains, weight_priors, lite: false, finite_diff_grad: true} // fix this
     }
 
+    pub fn tsr_optimize(num_chains: usize, objective_mode: String) {
+        let mut objectives: Vec<Box<dyn ObjectiveTrait + Send>> = Vec::new();
+        let mut weight_priors: Vec<f64> = Vec::new();
+        objectives.push(Box::new(TSRError::new(0))); weight_priors.push(0.05);
+    }
+
     pub fn call(&self, x: &[f64], vars: &AgentVars) -> f64 {
         if self.lite {
             self.__call_lite(x, vars)

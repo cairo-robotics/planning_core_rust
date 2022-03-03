@@ -1,4 +1,5 @@
 use nalgebra::geometry::Isometry3;
+use nalgebra::Vector3;
 use std::f32::consts::PI;
 
 pub struct TSR {
@@ -7,8 +8,24 @@ pub struct TSR {
     pub Bw:  Vec<Vec<f64>>
 }
 
+impl TSR {
+    pub fn new_from_poses(T0_w: &Vec<f64>, Tw_e: &Vec<f64>, Bw: &Vec<Vec<f64>>) -> Self {
+        let T0_w_translation = Vector3::new(T0_w[0], T0_w[1], T0_w[2]);
+        let T0_w_axisangle = Vector3::new(T0_w[3], T0_w[4], T0_w[5]);
+        let Tw_e_translation = Vector3::new(Tw_e[0], Tw_e[1], Tw_e[2]);
+        let Tw_e_axisangle = Vector3::new(Tw_e[3], Tw_e[4], Tw_e[5]);
+        let T0_w_iso = Isometry3::new(T0_w_translation, T0_w_axisangle);
+        let Tw_e_iso = Isometry3::new(Tw_e_translation, Tw_e_axisangle);
 
-pub fn distanceToTSR(T0_s: &Isometry3<f64>, tsr: &TSR) -> (f64, Vec<f64>) {
+        TSR {
+            T0_w: T0_w_iso,
+            Tw_e: Tw_e_iso,
+            Bw: Bw.clone()
+        }
+    }
+}
+
+pub fn distance_to_TSR(T0_s: &Isometry3<f64>, tsr: &TSR) -> (f64, Vec<f64>) {
     // pose of the grasp location or the pose of the object held by the hand in world coordinates
     let T0_sp = T0_s * tsr.Tw_e.inverse();
     // T0_sp in terms of the coordinates of the target frame w given by the Task Space Region tsr.
@@ -18,25 +35,26 @@ pub fn distanceToTSR(T0_s: &Isometry3<f64>, tsr: &TSR) -> (f64, Vec<f64>) {
     // Since there are equivalent angle displacements for rpy, generate those equivalents by added +/- PI.
     // Use the smallest delta_x_dist of the equivalency set.
     let rpys = generate_equivalent_euler_angles(&disp[2..6]);
-    let deltas = Vec::new();
+    let mut deltas = Vec::new();
     deltas.push(delta_x(disp.as_slice(), &tsr.Bw));
     for rpy in rpys.iter() {
         deltas.push(
             delta_x(vec![disp[0], disp[1], disp[2], rpy[0], rpy[1], rpy[2]].as_slice(), &tsr.Bw))
     }
-    let distances = Vec::new();
-    for delta in deltas {
-        distances.push(l2_norm(delta.as_slice()))
+    let mut distances = Vec::new();
+    for delta in deltas.clone() {
+        distances.push(l2_norm(delta.clone().as_slice()))
     }
-    let min_dist = distances.into_iter().reduce(f64::min).unwrap();
-    let index = distances.iter().position(|&r| r == min_dist).unwrap();
-    return (min_dist, deltas[index])
-}
+    let min_dist = distances.clone().into_iter().reduce(f64::min).unwrap();
+    let index = distances.into_iter().position(|r| r == min_dist).unwrap();
+    let delta_x_values = deltas.remove(index);
+    return (min_dist, delta_x_values)
+} 
 
 pub fn displacement(T0_s: &Isometry3<f64>) -> Vec<f64>{
    
     // Tv = [-Tm[0:3, 3][2], -Tm[0:3, 3][0], -Tm[0:3, 3][1]]
-    let displacements = Vec::new();
+    let mut displacements = Vec::new();
     displacements.push(T0_s.translation.vector[0]);
     displacements.push(T0_s.translation.vector[1]);    
     displacements.push(T0_s.translation.vector[2]);
@@ -65,7 +83,7 @@ pub fn delta_x(displacement: &[f64], bounds: &[Vec<f64>]) -> Vec<f64>{
     // that represents the distance the displacement is from the bounds dictated by the constraint bounds. 
 
     // For each displacement value, if the value is within the limits of the respective bound, it will be 0.
-    let delta = Vec::new();
+    let mut delta = Vec::new();
     for i in 0..displacement.len(){
         let cmin = bounds[i][0];
         let cmax = bounds[i][1];
@@ -108,7 +126,7 @@ pub fn cartesian_product(lists: &[&[f64]]) -> Vec<Vec<f64>> {
     }
 
 pub fn l2_norm(vec: &[f64]) -> f64 {
-    let sum = 0.0;
+    let mut sum = 0.0;
     for i in 0..vec.len(){
         sum += f64::powi(vec[i], 2);
     }
