@@ -3,3 +3,4 @@ pub mod tools;
 pub mod agents;
 pub mod relaxed_ik;
 pub mod omega_optimization;
+pub mod tsr_optimization;

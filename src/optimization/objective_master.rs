@@ -1,14 +1,12 @@
-use crate::optimization::objective::*;
 use crate::core::vars::AgentVars;
-
-
+use crate::optimization::objective::*;
 
 pub struct ObjectiveMaster {
     pub objectives: Vec<Box<dyn ObjectiveTrait + Send>>,
     pub num_chains: usize,
     pub weight_priors: Vec<f64>,
     pub lite: bool,
-    pub finite_diff_grad: bool
+    pub finite_diff_grad: bool,
 }
 
 impl ObjectiveMaster {
@@ -21,7 +19,13 @@ impl ObjectiveMaster {
             objectives.push(Box::new(MatchEEQuatGoals::new(i)));
             weight_priors.push(1.0);
         }
-        Self{objectives, num_chains, weight_priors, lite: true, finite_diff_grad: true}
+        Self {
+            objectives,
+            num_chains,
+            weight_priors,
+            lite: true,
+            finite_diff_grad: true,
+        }
     }
 
     pub fn tune_weight_priors(&mut self, vars: &AgentVars) {
@@ -35,12 +39,12 @@ impl ObjectiveMaster {
                 }
             }
             // match ee quat goal objectives
-            let weight_cur = self.weight_priors[3*i+1];
+            let weight_cur = self.weight_priors[3 * i + 1];
             let weight_delta = a / (a + score_max) - weight_cur;
             if weight_delta.abs() < cap {
-                self.weight_priors[3*i+1] += weight_delta;
+                self.weight_priors[3 * i + 1] += weight_delta;
             } else {
-                self.weight_priors[3*i+1] += cap * weight_delta / weight_delta.abs();
+                self.weight_priors[3 * i + 1] += cap * weight_delta / weight_delta.abs();
             }
         }
     }
@@ -66,16 +70,27 @@ impl ObjectiveMaster {
                 weight_priors.push(1.0);
             }
         }
-        objectives.push(Box::new(MinimizeVelocity));   weight_priors.push(7.0);
-        objectives.push(Box::new(MinimizeAcceleration));    weight_priors.push(2.0);
-        objectives.push(Box::new(MinimizeJerk));    weight_priors.push(1.0);
-        objectives.push(Box::new(JointLimits));    weight_priors.push(1.0);
-        objectives.push(Box::new(NNSelfCollision));    weight_priors.push(1.0);
+        objectives.push(Box::new(MinimizeVelocity));
+        weight_priors.push(7.0);
+        objectives.push(Box::new(MinimizeAcceleration));
+        weight_priors.push(2.0);
+        objectives.push(Box::new(MinimizeJerk));
+        weight_priors.push(1.0);
+        objectives.push(Box::new(JointLimits));
+        weight_priors.push(1.0);
+        objectives.push(Box::new(NNSelfCollision));
+        weight_priors.push(1.0);
 
-        Self{objectives, num_chains, weight_priors, lite: false, finite_diff_grad: true} // fix this
+        Self {
+            objectives,
+            num_chains,
+            weight_priors,
+            lite: false,
+            finite_diff_grad: true,
+        } // fix this
     }
 
-    pub fn omega_project(num_chains: usize, objective_mode: String) -> Self {
+    pub fn omega_optimize(num_chains: usize, objective_mode: String) -> Self {
         let mut objectives: Vec<Box<dyn ObjectiveTrait + Send>> = Vec::new();
         let mut weight_priors: Vec<f64> = Vec::new();
         for i in 0..num_chains {
@@ -96,20 +111,52 @@ impl ObjectiveMaster {
                 weight_priors.push(1.0);
             }
         }
-        // objectives.push(Box::new(MinimizeVelocity));   weight_priors.push(1.0);
-        // objectives.push(Box::new(MinimizeAcceleration));    weight_priors.push(1.0);
-        // objectives.push(Box::new(MinimizeJerk));    weight_priors.push(1.0);
-        objectives.push(Box::new(JointLimits));    weight_priors.push(1.0);
-        objectives.push(Box::new(NNSelfCollision));    weight_priors.push(1.0);
-        objectives.push(Box::new(MinimizeDistanceKeyframeMean)); weight_priors.push(0.05);
+        objectives.push(Box::new(JointLimits));
+        weight_priors.push(1.0);
+        objectives.push(Box::new(NNSelfCollision));
+        weight_priors.push(1.0);
+        objectives.push(Box::new(MinimizeDistanceKeyframeMean));
+        weight_priors.push(0.05);
 
-        Self{objectives, num_chains, weight_priors, lite: false, finite_diff_grad: true} // fix this
+        Self {
+            objectives,
+            num_chains,
+            weight_priors,
+            lite: false,
+            finite_diff_grad: true,
+        } // fix this
     }
 
-    pub fn tsr_optimize(num_chains: usize, objective_mode: String) {
+    pub fn tsr_optimize(num_chains: usize, objective_mode: String) -> Self {
         let mut objectives: Vec<Box<dyn ObjectiveTrait + Send>> = Vec::new();
         let mut weight_priors: Vec<f64> = Vec::new();
-        objectives.push(Box::new(TSRError::new(0))); weight_priors.push(0.05);
+        for i in 0..num_chains {
+            objectives.push(Box::new(EnvCollision::new(i)));
+            if objective_mode == "noECA" {
+                weight_priors.push(0.0);
+            } else {
+                weight_priors.push(1.0);
+            }
+            objectives.push(Box::new(TSRError::new(i)));
+            weight_priors.push(7.0);
+        }
+        // objectives.push(Box::new(MinimizeVelocity));
+        // weight_priors.push(7.0);
+        // objectives.push(Box::new(MinimizeAcceleration));
+        // weight_priors.push(2.0);
+        // objectives.push(Box::new(MinimizeJerk));
+        // weight_priors.push(1.0);
+        objectives.push(Box::new(JointLimits));
+        weight_priors.push(1.0);
+        objectives.push(Box::new(NNSelfCollision));
+        weight_priors.push(1.0);
+        Self {
+            objectives,
+            num_chains,
+            weight_priors,
+            lite: false,
+            finite_diff_grad: true,
+        }
     }
 
     pub fn call(&self, x: &[f64], vars: &AgentVars) -> f64 {
@@ -163,7 +210,7 @@ impl ObjectiveMaster {
     }
 
     fn __gradient(&self, x: &[f64], vars: &AgentVars) -> (f64, Vec<f64>) {
-        let mut grad: Vec<f64> = vec![0. ; x.len()];
+        let mut grad: Vec<f64> = vec![0.; x.len()];
         let mut obj = 0.0;
 
         let mut finite_diff_list: Vec<usize> = Vec::new();
@@ -192,7 +239,7 @@ impl ObjectiveMaster {
                 let frames_h = vars.robot.get_frames_immutable(x_h.as_slice());
                 for j in &finite_diff_list {
                     let f_h = self.objectives[*j].call(x, vars, &frames_h);
-                    grad[i] += self.weight_priors[*j] * ((-f_0s[*j] + f_h) /  0.0000001);
+                    grad[i] += self.weight_priors[*j] * ((-f_0s[*j] + f_h) / 0.0000001);
                 }
             }
         }
@@ -201,7 +248,7 @@ impl ObjectiveMaster {
     }
 
     fn __gradient_lite(&self, x: &[f64], vars: &AgentVars) -> (f64, Vec<f64>) {
-        let mut grad: Vec<f64> = vec![0. ; x.len()];
+        let mut grad: Vec<f64> = vec![0.; x.len()];
         let mut obj = 0.0;
 
         let mut finite_diff_list: Vec<usize> = Vec::new();
@@ -230,7 +277,7 @@ impl ObjectiveMaster {
                 let poses_h = vars.robot.get_ee_pos_and_quat_immutable(x_h.as_slice());
                 for j in &finite_diff_list {
                     let f_h = self.objectives[*j].call_lite(x, vars, &poses_h);
-                    grad[i] += self.weight_priors[*j] * ((-f_0s[*j] + f_h) /  0.0000001);
+                    grad[i] += self.weight_priors[*j] * ((-f_0s[*j] + f_h) / 0.0000001);
                 }
             }
         }
@@ -238,8 +285,8 @@ impl ObjectiveMaster {
         (obj, grad)
     }
 
-    fn __gradient_finite_diff(&self, x: &[f64], vars: &AgentVars) -> (f64, Vec<f64>)  {
-        let mut grad: Vec<f64> = vec![0. ; x.len()];
+    fn __gradient_finite_diff(&self, x: &[f64], vars: &AgentVars) -> (f64, Vec<f64>) {
+        let mut grad: Vec<f64> = vec![0.; x.len()];
         let mut f_0 = self.call(x, vars);
 
         for i in 0..x.len() {
@@ -253,7 +300,7 @@ impl ObjectiveMaster {
     }
 
     fn __gradient_finite_diff_lite(&self, x: &[f64], vars: &AgentVars) -> (f64, Vec<f64>) {
-        let mut grad: Vec<f64> = vec![0. ; x.len()];
+        let mut grad: Vec<f64> = vec![0.; x.len()];
         let mut f_0 = self.call(x, vars);
 
         for i in 0..x.len() {

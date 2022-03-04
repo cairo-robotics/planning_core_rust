@@ -27,7 +27,7 @@ impl OmegaOptimization {
 
     pub fn from_yaml_path(fp: String, mode: usize) -> Self {
         let vars = AgentVars::from_yaml_path(fp.clone(), false, false);
-        let mut om = ObjectiveMaster::omega_project(vars.robot.num_chains, vars.objective_mode.clone());
+        let mut om = ObjectiveMaster::omega_optimize(vars.robot.num_chains, vars.objective_mode.clone());
         if mode == 0 {
             om = ObjectiveMaster::standard_ik(vars.robot.num_chains);
         }

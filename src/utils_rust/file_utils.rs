@@ -15,7 +15,6 @@ pub fn get_path_of_exec() -> String {
 pub fn get_path_to_config() -> String {
     let key = "config_path";
     let path_to_src = env::var(key).unwrap_or_else(|_e| {get_path_of_exec()});
-    println!{"{}", path_to_src};
     path_to_src    
 }
 

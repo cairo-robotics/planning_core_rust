@@ -12,28 +12,6 @@ use ncollide3d::query::*;
 use ncollide3d::shape::*;
 use std::ops::Deref;
 
-// #[derive(Clone, Debug)]
-// pub struct Vars {
-//     pub init_state: Vec<f64>,
-//     pub xopt: Vec<f64>,
-//     pub prev_state: Vec<f64>,
-//     pub prev_state2: Vec<f64>,
-//     pub prev_state3: Vec<f64>
-// }
-// impl Vars {
-//     pub fn new(init_state: Vec<f64>) -> Self {
-//         Vars{init_state: init_state.clone(), xopt: init_state.clone(), prev_state: init_state.clone(),
-//             prev_state2: init_state.clone(), prev_state3: init_state.clone()}
-//     }
-
-//     pub fn update(&mut self, xopt: Vec<f64>) {
-//         self.prev_state3 = self.prev_state2.clone();
-//         self.prev_state2 = self.prev_state.clone();
-//         self.prev_state = self.xopt.clone();
-//         self.xopt = xopt.clone();
-//     }
-// }
-
 pub struct AgentVars {
     pub robot: Robot,
     pub sampler: ThreadRobotSampler,
@@ -57,12 +35,15 @@ pub struct AgentVars {
 
 impl AgentVars {
     pub fn from_yaml_path(
-        fp: String,
+        settings_fp: String,
         position_mode_relative: bool,
         rotation_mode_relative: bool,
     ) -> Self {
-        let ifp = InfoFileParser::from_yaml_path(fp.clone());
-        let mut robot = Robot::from_yaml_path(fp.clone());
+        let info_file_name = get_info_file_name(settings_fp.clone());
+        let path_to_config = get_path_to_config();
+        let info_fp = path_to_config + "/info_files/" + info_file_name.as_str();
+        let ifp = InfoFileParser::from_yaml_path(info_fp.clone());
+        let mut robot = Robot::from_yaml_path(info_fp.clone());
         let num_chains = robot.joint_names.len();
         let sampler = ThreadRobotSampler::new(robot.clone());
 

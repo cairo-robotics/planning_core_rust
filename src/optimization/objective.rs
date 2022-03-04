@@ -317,9 +317,10 @@ impl ObjectiveTrait for TSRError {
         let tmp = Quaternion::new(frames[0].1[last_quat_elem].w, frames[0].1[last_quat_elem].i, frames[0].1[last_quat_elem].j, frames[0].1[last_quat_elem].k);
         let unit_quat = UnitQuaternion::from_quaternion(tmp);
         let T0_w_iso = Isometry3::new(pos, Vector3::new(unit_quat.euler_angles().0, unit_quat.euler_angles().1, unit_quat.euler_angles().2));
-        let tsr = v.tsr;
-        let distance_and_delta = distance_to_TSR(&T0_w_iso, &tsr);
-        groove_loss(distance_and_delta.0, 0.0, 2, 0.1, 10.0, 2)
+        let distance_and_delta = distance_to_TSR(&T0_w_iso, &v.tsr);
+        println!("{}", distance_and_delta.0);
+        println!("{:?}", distance_and_delta.1);
+        groove_loss(distance_and_delta.0, 0.0, 2, 0.5, 10.0, 2)
     }
 
     fn call_lite(&self, x: &[f64], v: &vars::AgentVars, ee_poses: &Vec<(nalgebra::Vector3<f64>, nalgebra::UnitQuaternion<f64>)>) -> f64 {
@@ -327,8 +328,7 @@ impl ObjectiveTrait for TSRError {
         let tmp = Quaternion::new(ee_poses[self.arm_idx].1.w, ee_poses[self.arm_idx].1.i, ee_poses[self.arm_idx].1.j, ee_poses[self.arm_idx].1.k);
         let unit_quat = UnitQuaternion::from_quaternion(tmp);
         let T0_w_iso = Isometry3::new(pos, Vector3::new(unit_quat.euler_angles().0, unit_quat.euler_angles().1, unit_quat.euler_angles().2));
-        let tsr = v.tsr;
-        let distance_and_delta = distance_to_TSR(&T0_w_iso, &tsr);
-        groove_loss(distance_and_delta.0, 0.0, 2, 0.1, 10.0, 2)
+        let distance_and_delta = distance_to_TSR(&T0_w_iso, &v.tsr);
+        groove_loss(distance_and_delta.0, 0.0, 2, 0.5, 10.0, 2)
     }
 }
