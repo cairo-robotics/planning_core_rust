@@ -53,7 +53,7 @@ impl TSROptimization {
             if self.vars.objective_mode == "ECAA" {
                 self.om.tune_weight_priors(&self.vars);
             }
-            self.groove.optimize(&mut out_x, &self.vars, &self.om, 100000);
+            self.groove.optimize(&mut out_x, &self.vars, &self.om, 200);
             self.vars.update(out_x.clone());  
         }  
         out_x

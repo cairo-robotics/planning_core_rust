@@ -138,7 +138,7 @@ impl ObjectiveMaster {
                 weight_priors.push(1.0);
             }
             objectives.push(Box::new(TSRError::new(i)));
-            weight_priors.push(7.0);
+            weight_priors.push(5.0);
         }
         // objectives.push(Box::new(MinimizeVelocity));
         // weight_priors.push(7.0);

@@ -71,10 +71,10 @@ impl Agent {
         ee_position.push(pos.z);
 
         let tmp = Quaternion::new(
-            frames[0].1[last_quat_elem].w,
-            frames[0].1[last_quat_elem].i,
-            frames[0].1[last_quat_elem].j,
-            frames[0].1[last_quat_elem].k,
+            -frames[0].1[last_quat_elem].w,
+            -frames[0].1[last_quat_elem].i,
+            -frames[0].1[last_quat_elem].j,
+            -frames[0].1[last_quat_elem].k,
         );
         let unit_quat = UnitQuaternion::from_quaternion(tmp);
         let quat = unit_quat.quaternion();
