@@ -190,31 +190,14 @@ impl Agent {
 
     fn omega_optimize(
         &mut self,
-        pos_vec: Vec<f64>,
-        quat_vec: Vec<f64>,
-        keyframe_mean_config: Vec<f64>,
+        keyframe_mean_config: Vec<f64>
     ) -> PyResult<Opt> {
         // let _ = self.update_xopt(best_guess);
         let _ = self.update_keyframe_mean(keyframe_mean_config);
 
-        let arc = Arc::new(Mutex::new(EEPoseGoalsSubscriber::new()));
-        let mut g = arc.lock().unwrap();
-        for i in 0..self.omega_opt.lock().unwrap().vars.robot.num_chains {
-            g.pos_goals.push(Vector3::new(
-                pos_vec[3 * i],
-                pos_vec[3 * i + 1],
-                pos_vec[3 * i + 2],
-            ));
-            let tmp_q = Quaternion::new(
-                quat_vec[4 * i + 3],
-                quat_vec[4 * i],
-                quat_vec[4 * i + 1],
-                quat_vec[4 * i + 2],
-            );
-            g.quat_goals.push(UnitQuaternion::from_quaternion(tmp_q));
-        }
+        // let arc = Arc::new(Mutex::new(EEPoseGoalsSubscriber::new()));
 
-        let ja = self.omega_opt.lock().unwrap().solve(&g);
+        let ja = self.omega_opt.lock().unwrap().solve();
         let len = ja.len();
         Ok(Opt {
             data: ja,
@@ -241,8 +224,6 @@ fn init_agent_vars(
     let path_to_config = get_path_to_config();
     let fp = path_to_config + "/info_files/" + info_file_name.as_str();
     let ifp = InfoFileParser::from_yaml_path(fp.clone());
-    println!("{:?}", ifp.joint_names);
-    println!("{}", get_path_to_config());
     let mut robot = Robot::from_yaml_path(fp.clone());
     let num_chains = ifp.joint_names.len();
     let sampler = ThreadRobotSampler::new(robot.clone());

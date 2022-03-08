@@ -99,6 +99,28 @@ pub fn delta_x(displacement: &[f64], bounds: &[Vec<f64>]) -> Vec<f64>{
     delta
 }
 
+pub fn delta_x_replacement(displacement: &[f64], bounds: &[Vec<f64>], replacements: &[f64]) -> Vec<f64>{
+
+    // Given a vector of displacements and a bounds/constraint matrix it produces a differential vector
+    // that represents the distance the displacement is from the bounds dictated by the constraint bounds. 
+
+    // For each displacement value, if the value is within the limits of the respective bound, it will be 0.
+    let mut delta = Vec::new();
+    for i in 0..displacement.len(){
+        let cmin = bounds[i][0];
+        let cmax = bounds[i][1];
+        let di = displacement[i];
+        if di > cmax {
+            delta.push(replacements[i] + di - cmax);
+        } else if di < cmin {
+            delta.push(replacements[i] + di - cmin);
+        } else {
+            delta.push(replacements[i]);
+        }
+    }
+    delta
+}
+
 
 pub fn partial_cartesian(a: Vec<Vec<f64>>, b: &[f64]) -> Vec<Vec<f64>> {
     a.into_iter().flat_map(|xs| {
