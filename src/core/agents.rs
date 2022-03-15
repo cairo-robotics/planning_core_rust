@@ -245,7 +245,6 @@ fn init_agent_vars(
 
     let fp = get_path_to_config() + "/settings.yaml";
     let fp2 = fp.clone();
-    println!("AgentVars from_yaml_path {}", fp);
     let env_collision_file = EnvCollisionFileParser::from_yaml_path(fp);
     let frames = robot.get_frames_immutable(&ifp.starting_config.clone());
     let env_collision = RelaxedIKEnvCollision::init_collision_world(env_collision_file, &frames);
