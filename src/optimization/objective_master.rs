@@ -101,7 +101,7 @@ impl ObjectiveMaster {
                 weight_priors.push(1.0);
             }
             objectives.push(Box::new(TSRError::new(i)));
-            weight_priors.push(2.0);
+            weight_priors.push(7.0);
             // objectives.push(Box::new(MatchEEPosGoals::new(i)));
             // weight_priors.push(1.0);
             // objectives.push(Box::new(MatchEEQuatGoals::new(i)));
@@ -113,12 +113,12 @@ impl ObjectiveMaster {
         weight_priors.push(2.0);
         objectives.push(Box::new(MinimizeJerk));
         weight_priors.push(1.0);
-        // objectives.push(Box::new(JointLimits));
-        // weight_priors.push(1.0);
+        objectives.push(Box::new(JointLimits));
+        weight_priors.push(1.0);
         objectives.push(Box::new(NNSelfCollision));
         weight_priors.push(1.0);
         objectives.push(Box::new(MinimizeDistanceKeyframeMean));
-        weight_priors.push(10.0);
+        weight_priors.push(5.0);
 
         Self {
             objectives,
