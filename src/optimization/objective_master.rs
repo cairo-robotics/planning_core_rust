@@ -100,7 +100,7 @@ impl ObjectiveMaster {
             } else {
                 weight_priors.push(1.0);
             }
-            objectives.push(Box::new(TSRError::new(i)));
+            objectives.push(Box::new(PlanningTSRError::new(i)));
             weight_priors.push(7.0);
             // objectives.push(Box::new(MatchEEPosGoals::new(i)));
             // weight_priors.push(1.0);
@@ -139,7 +139,7 @@ impl ObjectiveMaster {
             } else {
                 weight_priors.push(1.0);
             }
-            objectives.push(Box::new(TSRError::new(i)));
+            objectives.push(Box::new(PlanningTSRError::new(i)));
             weight_priors.push(5.0);
             // objectives.push(Box::new(MatchEEPosGoals::new(i)));
             // weight_priors.push(1.0);
@@ -186,7 +186,7 @@ impl ObjectiveMaster {
             } else {
                 weight_priors.push(1.0);
             }
-            objectives.push(Box::new(TSRError::new(i)));
+            objectives.push(Box::new(PlanningTSRError::new(i)));
             weight_priors.push(1.0);
             // objectives.push(Box::new(MatchEEPosGoals::new(i)));
             // weight_priors.push(1.0);

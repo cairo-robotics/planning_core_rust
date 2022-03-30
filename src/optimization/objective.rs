@@ -303,13 +303,13 @@ impl ObjectiveTrait for MinimizeDistanceKeyframeMean {
     }
 }
 
-pub struct TSRError{
+pub struct PlanningTSRError{
     pub arm_idx: usize
 }
-impl TSRError {
+impl PlanningTSRError {
     pub fn new(arm_idx: usize) -> Self {Self{arm_idx}}
 }
-impl ObjectiveTrait for TSRError {
+impl ObjectiveTrait for PlanningTSRError {
     fn call(&self, _x: &[f64], v: &vars::AgentVars, frames: &Vec<(Vec<nalgebra::Vector3<f64>>, Vec<nalgebra::UnitQuaternion<f64>>)>) -> f64 {
         let last_pos_elem = frames[self.arm_idx].0.len() - 1;
         let pos = frames[self.arm_idx].0[last_pos_elem];
@@ -317,7 +317,7 @@ impl ObjectiveTrait for TSRError {
         let tmp = Quaternion::new(frames[0].1[last_quat_elem].w, frames[0].1[last_quat_elem].i, frames[0].1[last_quat_elem].j, frames[0].1[last_quat_elem].k);
         let unit_quat = UnitQuaternion::from_quaternion(tmp);
         let ts0_s_iso = Isometry3::new(pos, Vector3::new(unit_quat.euler_angles().0, unit_quat.euler_angles().1, unit_quat.euler_angles().2));
-        let distance_and_delta = distance_to_TSR(&ts0_s_iso, &v.tsr);
+        let distance_and_delta = distance_to_TSR(&ts0_s_iso, &v.planning_tsr);
         // println!("{}", distance_and_delta.0);
         // println!("{:?}", distance_and_delta.1);
         groove_loss(distance_and_delta.0, 0.0, 2, 0.1, 10.0, 2)
@@ -328,7 +328,37 @@ impl ObjectiveTrait for TSRError {
         let tmp = Quaternion::new(ee_poses[self.arm_idx].1.w, ee_poses[self.arm_idx].1.i, ee_poses[self.arm_idx].1.j, ee_poses[self.arm_idx].1.k);
         let unit_quat = UnitQuaternion::from_quaternion(tmp);
         let ts0_s_iso = Isometry3::new(pos, Vector3::new(unit_quat.euler_angles().0, unit_quat.euler_angles().1, unit_quat.euler_angles().2));
-        let distance_and_delta = distance_to_TSR(&ts0_s_iso, &v.tsr);
+        let distance_and_delta = distance_to_TSR(&ts0_s_iso, &v.planning_tsr);
+        groove_loss(distance_and_delta.0, 0.0, 2, 0.1, 10.0, 2)
+    }
+}
+
+pub struct SecondaryTSRError{
+    pub arm_idx: usize
+}
+impl SecondaryTSRError {
+    pub fn new(arm_idx: usize) -> Self {Self{arm_idx}}
+}
+impl ObjectiveTrait for SecondaryTSRError {
+    fn call(&self, _x: &[f64], v: &vars::AgentVars, frames: &Vec<(Vec<nalgebra::Vector3<f64>>, Vec<nalgebra::UnitQuaternion<f64>>)>) -> f64 {
+        let last_pos_elem = frames[self.arm_idx].0.len() - 1;
+        let pos = frames[self.arm_idx].0[last_pos_elem];
+        let last_quat_elem = frames[0].1.len() - 1;
+        let tmp = Quaternion::new(frames[0].1[last_quat_elem].w, frames[0].1[last_quat_elem].i, frames[0].1[last_quat_elem].j, frames[0].1[last_quat_elem].k);
+        let unit_quat = UnitQuaternion::from_quaternion(tmp);
+        let ts0_s_iso = Isometry3::new(pos, Vector3::new(unit_quat.euler_angles().0, unit_quat.euler_angles().1, unit_quat.euler_angles().2));
+        let distance_and_delta = distance_to_TSR(&ts0_s_iso, &v.secondary_tsr);
+        // println!("{}", distance_and_delta.0);
+        // println!("{:?}", distance_and_delta.1);
+        groove_loss(distance_and_delta.0, 0.0, 2, 0.1, 10.0, 2)
+    }
+
+    fn call_lite(&self, _x: &[f64], v: &vars::AgentVars, ee_poses: &Vec<(nalgebra::Vector3<f64>, nalgebra::UnitQuaternion<f64>)>) -> f64 {
+        let pos = ee_poses[self.arm_idx].0;
+        let tmp = Quaternion::new(ee_poses[self.arm_idx].1.w, ee_poses[self.arm_idx].1.i, ee_poses[self.arm_idx].1.j, ee_poses[self.arm_idx].1.k);
+        let unit_quat = UnitQuaternion::from_quaternion(tmp);
+        let ts0_s_iso = Isometry3::new(pos, Vector3::new(unit_quat.euler_angles().0, unit_quat.euler_angles().1, unit_quat.euler_angles().2));
+        let distance_and_delta = distance_to_TSR(&ts0_s_iso, &v.secondary_tsr);
         groove_loss(distance_and_delta.0, 0.0, 2, 0.1, 10.0, 2)
     }
 }
@@ -385,14 +415,14 @@ impl ObjectiveTrait for TSRPosGoal {
     fn call(&self, _x: &[f64], v: &vars::AgentVars, frames: &Vec<(Vec<nalgebra::Vector3<f64>>, Vec<nalgebra::UnitQuaternion<f64>>)>) -> f64 {
         let last_pos_elem = frames[self.arm_idx].0.len() - 1;
         let current_pos = frames[self.arm_idx].0[last_pos_elem];
-        let target_pos = v.tsr.T0_w.translation.vector;       
+        let target_pos = v.planning_tsr.T0_w.translation.vector;       
         let x_val = (target_pos - current_pos).norm();
         groove_loss(x_val, 0., 2, 0.3, 10.0, 2)
     }
 
     fn call_lite(&self, _x: &[f64], v: &vars::AgentVars, ee_poses: &Vec<(nalgebra::Vector3<f64>, nalgebra::UnitQuaternion<f64>)>) -> f64 {
         let current_pos = ee_poses[self.arm_idx].0;
-        let target_pos = v.tsr.T0_w.translation.vector;       
+        let target_pos = v.planning_tsr.T0_w.translation.vector;       
         let x_val = (target_pos - current_pos).norm();
         groove_loss(x_val, 0., 2, 0.3, 10.0, 2)
     }
@@ -443,7 +473,7 @@ impl ObjectiveTrait for TSRQuatGoal {
         let last_elem = frames[self.arm_idx].1.len() - 1;
         let tmp = Quaternion::new(-frames[self.arm_idx].1[last_elem].w, -frames[self.arm_idx].1[last_elem].i, -frames[self.arm_idx].1[last_elem].j, -frames[self.arm_idx].1[last_elem].k);
         let ee_quat2 = UnitQuaternion::from_quaternion(tmp);
-        let target_quat = nalgebra::try_convert(v.tsr.T0_w.rotation).unwrap();
+        let target_quat = nalgebra::try_convert(v.planning_tsr.T0_w.rotation).unwrap();
         let disp = angle_between(target_quat, frames[self.arm_idx].1[last_elem]);
         let disp2 = angle_between(target_quat, ee_quat2);
         let x_val = disp.min(disp2);
@@ -454,7 +484,7 @@ impl ObjectiveTrait for TSRQuatGoal {
         let tmp = Quaternion::new(-ee_poses[self.arm_idx].1.w, -ee_poses[self.arm_idx].1.i, -ee_poses[self.arm_idx].1.j, -ee_poses[self.arm_idx].1.k);
         let ee_quat2 = UnitQuaternion::from_quaternion(tmp);
 
-        let target_quat = nalgebra::try_convert(v.tsr.T0_w.rotation).unwrap();
+        let target_quat = nalgebra::try_convert(v.planning_tsr.T0_w.rotation).unwrap();
         let disp = angle_between(target_quat, ee_poses[self.arm_idx].1);
         let disp2 = angle_between(target_quat, ee_quat2);
         let x_val = disp.min(disp2);
