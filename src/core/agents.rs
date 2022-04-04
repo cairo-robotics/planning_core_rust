@@ -114,7 +114,7 @@ impl Agent {
         })
     }
 
-    fn update_dynamic_obstacle_cb(
+    fn dynamic_obstacle_cb(
         &mut self,
         name: String,
         pos_vec: Vec<f64>,
