@@ -30,7 +30,8 @@ pub struct AgentVars {
     pub env_collision: RelaxedIKEnvCollision,
     pub objective_mode: String,
     pub keyframe_mean: Vec<f64>,
-    pub tsr: TSR,
+    pub planning_tsr: TSR,
+    pub secondary_tsr: TSR,
 }
 
 impl AgentVars {
@@ -69,7 +70,19 @@ impl AgentVars {
         let env_collision =
             RelaxedIKEnvCollision::init_collision_world(env_collision_file, &frames);
         let objective_mode = get_objective_mode(fp2);
-        let tsr = TSR::new_from_poses(
+        let planning_tsr = TSR::new_from_poses(
+            &vec![0.0f64, 0.0, 0.0, 0.0, 0.0, 0.0],
+            &vec![0.0f64, 0.0, 0.0, 0.0, 0.0, 0.0],
+            &vec![
+                vec![-100.0f64, 100.0],
+                vec![-100.0f64, 100.0],
+                vec![-100.0f64, 100.0],
+                vec![-3.14f64, 3.14],
+                vec![-3.14f64, 3.14],
+                vec![-3.14f64, 3.14],
+            ],
+        );
+        let secondary_tsr = TSR::new_from_poses(
             &vec![0.0f64, 0.0, 0.0, 0.0, 0.0, 0.0],
             &vec![0.0f64, 0.0, 0.0, 0.0, 0.0, 0.0],
             &vec![
@@ -100,7 +113,8 @@ impl AgentVars {
             env_collision,
             objective_mode,
             keyframe_mean: ifp.starting_config.clone(),
-            tsr: tsr
+            planning_tsr: planning_tsr,
+            secondary_tsr: secondary_tsr
         }
     }
 

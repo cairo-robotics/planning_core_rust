@@ -45,20 +45,8 @@ impl OmegaOptimization {
         OmegaOptimization::from_info_file_name(info_file_name.clone(), mode.clone())
     }
 
-    pub fn solve(&mut self, ee_sub: &EEPoseGoalsSubscriber) -> Vec<f64> {
+    pub fn solve(&mut self) -> Vec<f64> {
         let mut out_x = self.vars.xopt.clone();
-
-        if self.vars.rotation_mode_relative {
-            for i in 0..self.vars.robot.num_chains {
-                self.vars.goal_positions[i] = self.vars.init_ee_positions[i] + ee_sub.pos_goals[i];
-                self.vars.goal_quats[i] = ee_sub.quat_goals[i] * self.vars.init_ee_quats[i];
-            }
-        } else {
-            for i in 0..self.vars.robot.num_chains  {
-                self.vars.goal_positions[i] = ee_sub.pos_goals[i].clone();
-                self.vars.goal_quats[i] = ee_sub.quat_goals[i].clone();
-            }
-        }
 
         let in_collision = self.vars.update_collision_world();
         if !in_collision {
@@ -71,95 +59,95 @@ impl OmegaOptimization {
         out_x
     }
 
-    pub fn solve_with_user_provided_goals(&mut self, pos_goals: Vec<Vec<f64>>, quat_goals: Vec<Vec<f64>>) -> Vec<f64> {
-        let mut ee_sub = EEPoseGoalsSubscriber::new();
-        for i in 0..pos_goals.len() {
-            ee_sub.pos_goals.push( Vector3::new( pos_goals[i][0], pos_goals[i][1], pos_goals[i][2] ) );
-            let tmp_quat = Quaternion::new(quat_goals[i][0], quat_goals[i][1], quat_goals[i][2], quat_goals[i][3]);
-            ee_sub.quat_goals.push( UnitQuaternion::from_quaternion(tmp_quat) );
-        }
+    // pub fn solve_with_user_provided_goals(&mut self, pos_goals: Vec<Vec<f64>>, quat_goals: Vec<Vec<f64>>) -> Vec<f64> {
+    //     let mut ee_sub = EEPoseGoalsSubscriber::new();
+    //     for i in 0..pos_goals.len() {
+    //         ee_sub.pos_goals.push( Vector3::new( pos_goals[i][0], pos_goals[i][1], pos_goals[i][2] ) );
+    //         let tmp_quat = Quaternion::new(quat_goals[i][0], quat_goals[i][1], quat_goals[i][2], quat_goals[i][3]);
+    //         ee_sub.quat_goals.push( UnitQuaternion::from_quaternion(tmp_quat) );
+    //     }
 
-        self.solve(&ee_sub)
-    }
+    //     self.solve(&ee_sub)
+    // }
 
-    pub fn solve_precise(&mut self, ee_sub: &EEPoseGoalsSubscriber) -> Vec<f64> {
-        let mut out_x = self.vars.xopt.clone();
+    // pub fn solve_precise(&mut self, ee_sub: &EEPoseGoalsSubscriber) -> Vec<f64> {
+    //     let mut out_x = self.vars.xopt.clone();
 
-        if self.vars.rotation_mode_relative {
-            for i in 0..self.vars.robot.num_chains {
-                self.vars.goal_positions[i] = self.vars.init_ee_positions[i] + ee_sub.pos_goals[i];
-                self.vars.goal_quats[i] = ee_sub.quat_goals[i] * self.vars.init_ee_quats[i];
-            }
-        } else {
-            for i in 0..self.vars.robot.num_chains  {
-                self.vars.goal_positions[i] = ee_sub.pos_goals[i].clone();
-                self.vars.goal_quats[i] = ee_sub.quat_goals[i].clone();
-            }
-        }
+    //     if self.vars.rotation_mode_relative {
+    //         for i in 0..self.vars.robot.num_chains {
+    //             self.vars.goal_positions[i] = self.vars.init_ee_positions[i] + ee_sub.pos_goals[i];
+    //             self.vars.goal_quats[i] = ee_sub.quat_goals[i] * self.vars.init_ee_quats[i];
+    //         }
+    //     } else {
+    //         for i in 0..self.vars.robot.num_chains  {
+    //             self.vars.goal_positions[i] = ee_sub.pos_goals[i].clone();
+    //             self.vars.goal_quats[i] = ee_sub.quat_goals[i].clone();
+    //         }
+    //     }
 
-        self.groove_nlopt.optimize(&mut out_x, &self.vars, &self.om, 200);
+    //     self.groove_nlopt.optimize(&mut out_x, &self.vars, &self.om, 200);
 
-        let mut max_pos_error = 0.0;
-        let mut max_rot_error = 0.0;
-        let ee_poses = self.vars.robot.get_ee_pos_and_quat_immutable(&out_x);
-        for i in 0..self.vars.robot.num_chains {
-            let pos_error = (self.vars.goal_positions[i] - ee_poses[i].0).norm();
-            let rot_error = angle_between(self.vars.goal_quats[i].clone(), ee_poses[i].1.clone());
-            if pos_error > max_pos_error { max_pos_error = pos_error; }
-            if rot_error > max_rot_error { max_rot_error = rot_error; }
-        }
+    //     let mut max_pos_error = 0.0;
+    //     let mut max_rot_error = 0.0;
+    //     let ee_poses = self.vars.robot.get_ee_pos_and_quat_immutable(&out_x);
+    //     for i in 0..self.vars.robot.num_chains {
+    //         let pos_error = (self.vars.goal_positions[i] - ee_poses[i].0).norm();
+    //         let rot_error = angle_between(self.vars.goal_quats[i].clone(), ee_poses[i].1.clone());
+    //         if pos_error > max_pos_error { max_pos_error = pos_error; }
+    //         if rot_error > max_rot_error { max_rot_error = rot_error; }
+    //     }
 
-        while max_pos_error > 0.005 || max_rot_error > 0.005 {
-            let res = self.solve_randstart(ee_sub);
-            out_x = res.1.clone();
-            max_pos_error = 0.0; max_rot_error = 0.0;
-            let ee_poses = self.vars.robot.get_ee_pos_and_quat_immutable(&out_x);
-            for i in 0..self.vars.robot.num_chains {
-                let pos_error = (self.vars.goal_positions[i] - ee_poses[i].0).norm();
-                let rot_error = angle_between(self.vars.goal_quats[i].clone(), ee_poses[i].1.clone());
-                if pos_error > max_pos_error { max_pos_error = pos_error; }
-                if rot_error > max_rot_error { max_rot_error = rot_error; }
-            }
-        }
+    //     while max_pos_error > 0.005 || max_rot_error > 0.005 {
+    //         let res = self.solve_randstart(ee_sub);
+    //         out_x = res.1.clone();
+    //         max_pos_error = 0.0; max_rot_error = 0.0;
+    //         let ee_poses = self.vars.robot.get_ee_pos_and_quat_immutable(&out_x);
+    //         for i in 0..self.vars.robot.num_chains {
+    //             let pos_error = (self.vars.goal_positions[i] - ee_poses[i].0).norm();
+    //             let rot_error = angle_between(self.vars.goal_quats[i].clone(), ee_poses[i].1.clone());
+    //             if pos_error > max_pos_error { max_pos_error = pos_error; }
+    //             if rot_error > max_rot_error { max_rot_error = rot_error; }
+    //         }
+    //     }
 
-        self.vars.update(out_x.clone());
-        self.vars.update_collision_world();
+    //     self.vars.update(out_x.clone());
+    //     self.vars.update_collision_world();
 
-        out_x
-    }
+    //     out_x
+    // }
 
-    pub fn solve_randstart(&mut self, ee_sub: &EEPoseGoalsSubscriber) -> (bool, Vec<f64>) {
-        let mut out_x = self.vars.sampler.sample().data.as_vec().clone();
+    // pub fn solve_randstart(&mut self, ee_sub: &EEPoseGoalsSubscriber) -> (bool, Vec<f64>) {
+    //     let mut out_x = self.vars.sampler.sample().data.as_vec().clone();
 
-        if self.vars.rotation_mode_relative {
-            for i in 0..self.vars.robot.num_chains {
-                self.vars.goal_positions[i] = self.vars.init_ee_positions[i] + ee_sub.pos_goals[i];
-                self.vars.goal_quats[i] = ee_sub.quat_goals[i] * self.vars.init_ee_quats[i];
-            }
-        } else {
-            for i in 0..self.vars.robot.num_chains  {
-                self.vars.goal_positions[i] = ee_sub.pos_goals[i].clone();
-                self.vars.goal_quats[i] = ee_sub.quat_goals[i].clone();
-            }
-        }
+    //     if self.vars.rotation_mode_relative {
+    //         for i in 0..self.vars.robot.num_chains {
+    //             self.vars.goal_positions[i] = self.vars.init_ee_positions[i] + ee_sub.pos_goals[i];
+    //             self.vars.goal_quats[i] = ee_sub.quat_goals[i] * self.vars.init_ee_quats[i];
+    //         }
+    //     } else {
+    //         for i in 0..self.vars.robot.num_chains  {
+    //             self.vars.goal_positions[i] = ee_sub.pos_goals[i].clone();
+    //             self.vars.goal_quats[i] = ee_sub.quat_goals[i].clone();
+    //         }
+    //     }
 
-        self.groove_nlopt.optimize(&mut out_x, &self.vars, &self.om, 200);
+    //     self.groove_nlopt.optimize(&mut out_x, &self.vars, &self.om, 200);
 
-        let mut max_pos_error = 0.0;
-        let mut max_rot_error = 0.0;
-        let ee_poses = self.vars.robot.get_ee_pos_and_quat_immutable(&out_x);
-        for i in 0..self.vars.robot.num_chains {
-            let pos_error = (self.vars.goal_positions[i] - ee_poses[i].0).norm();
-            let rot_error = angle_between(self.vars.goal_quats[i].clone(), ee_poses[i].1.clone());
-            if pos_error > max_pos_error {max_pos_error = pos_error;}
-            if rot_error > max_rot_error {max_rot_error = rot_error;}
-        }
+    //     let mut max_pos_error = 0.0;
+    //     let mut max_rot_error = 0.0;
+    //     let ee_poses = self.vars.robot.get_ee_pos_and_quat_immutable(&out_x);
+    //     for i in 0..self.vars.robot.num_chains {
+    //         let pos_error = (self.vars.goal_positions[i] - ee_poses[i].0).norm();
+    //         let rot_error = angle_between(self.vars.goal_quats[i].clone(), ee_poses[i].1.clone());
+    //         if pos_error > max_pos_error {max_pos_error = pos_error;}
+    //         if rot_error > max_rot_error {max_rot_error = rot_error;}
+    //     }
 
-        if max_pos_error > 0.005 || max_rot_error > 0.005 {
-            return (false, out_x)
-        } else {
-            // self.vars.update(out_x.clone());
-            return (true, out_x)
-        }
-    }
+    //     if max_pos_error > 0.005 || max_rot_error > 0.005 {
+    //         return (false, out_x)
+    //     } else {
+    //         // self.vars.update(out_x.clone());
+    //         return (true, out_x)
+    //     }
+    // }
 }

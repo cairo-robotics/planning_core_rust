@@ -31,7 +31,11 @@ pub fn distance_to_TSR(T0_s: &Isometry3<f64>, tsr: &TSR) -> (f64, Vec<f64>) {
     // T0_sp in terms of the coordinates of the target frame w given by the Task Space Region tsr.
     let Tw_sp = tsr.T0_w.inverse() * T0_sp;
     // Generate the displacement vector of Tw_sp. Displacement represents the error given T0_s relative to Tw_e transform.
-    let disp = displacement(&Tw_sp);
+    let mut disp = displacement(&Tw_sp);
+    // // We want the global translation, not the translation dependent on rotation between the transformations.
+    // disp[0] = T0_sp.translation.x - tsr.T0_w.translation.x;
+    // disp[1] = T0_sp.translation.y - tsr.T0_w.translation.y;
+    // disp[2] = T0_sp.translation.z - tsr.T0_w.translation.z;
     // Since there are equivalent angle displacements for rpy, generate those equivalents by added +/- PI.
     // Use the smallest delta_x_dist of the equivalency set.
     let rpys = generate_equivalent_euler_angles(&disp[2..6]);
@@ -94,6 +98,28 @@ pub fn delta_x(displacement: &[f64], bounds: &[Vec<f64>]) -> Vec<f64>{
             delta.push(di - cmin);
         } else {
             delta.push(0.0);
+        }
+    }
+    delta
+}
+
+pub fn delta_x_replacement(displacement: &[f64], bounds: &[Vec<f64>], replacements: &[f64]) -> Vec<f64>{
+
+    // Given a vector of displacements and a bounds/constraint matrix it produces a differential vector
+    // that represents the distance the displacement is from the bounds dictated by the constraint bounds. 
+
+    // For each displacement value, if the value is within the limits of the respective bound, it will be 0.
+    let mut delta = Vec::new();
+    for i in 0..displacement.len(){
+        let cmin = bounds[i][0];
+        let cmax = bounds[i][1];
+        let di = displacement[i];
+        if di > cmax {
+            delta.push(replacements[i] + di - cmax);
+        } else if di < cmin {
+            delta.push(replacements[i] + di - cmin);
+        } else {
+            delta.push(replacements[i]);
         }
     }
     delta

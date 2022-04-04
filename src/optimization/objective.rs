@@ -2,9 +2,9 @@ use crate::core::{vars};
 use crate::collision::env_collision::{*};
 use crate::utils_rust::transformations::{*};
 use crate::optimization::loss::{groove_loss, groove_loss_derivative};
-use crate::optimization::tsr::distance_to_TSR;
+use crate::optimization::tsr::{*};
 use nalgebra::geometry::{UnitQuaternion, Quaternion, Isometry3};
-use nalgebra::{Point3, Vector3};
+use nalgebra::{Point3, Vector3, DVector};
 use ncollide3d::{shape, query};
 use std::ops::Deref;
 
@@ -98,6 +98,7 @@ pub struct NNSelfCollision;
 impl ObjectiveTrait for NNSelfCollision {
     fn call(&self, x: &[f64], v: &vars::AgentVars, frames: &Vec<(Vec<nalgebra::Vector3<f64>>, Vec<nalgebra::UnitQuaternion<f64>>)>) -> f64 {
         let mut x_val = v.collision_nn.predict(&x.to_vec());
+
         groove_loss(x_val, 0., 2, 2.1, 0.0002, 4)
     }
 
@@ -151,16 +152,13 @@ impl ObjectiveTrait for EnvCollision {
                     let segment = shape::Segment::new(start_pt, end_pt);
                     let segment_pos = nalgebra::one();
                     let dis = query::distance(obstacle.position(), obstacle.shape().deref(), &segment_pos, &segment) - link_radius;
-                    // println!("Obstacle: {}, Link: {}, Distance: {:?}", obstacle.data().name, i, dis);
                     sum += a / (dis + link_radius).powi(2);
                 }
-                // println!("OBJECTIVE -> {:?}, Sum: {:?}", obstacle.data().name, sum);
                 x_val += sum;
             }
         }
         
         // let end = PreciseTime::now();
-        // println!("Obstacles calculating takes {}", start.to(end));
 
         groove_loss(x_val, 0., 2, 3.5, 0.00005, 4)
     }
@@ -198,6 +196,7 @@ impl ObjectiveTrait for JointLimits {
             let n = 2.0 * (r - 0.5);
             sum += a*n.powi(50);
         }
+
         groove_loss(sum, 0.0, 2, 0.32950, 0.1, 2)
     }
 }
@@ -289,6 +288,7 @@ impl ObjectiveTrait for MinimizeDistanceKeyframeMean {
             sum += diff.powi(2);
         }
         let x_val = sum.sqrt();
+
         groove_loss(x_val, 0.0, 2, 0.1, 10.0, 2)
     }
 
@@ -303,32 +303,191 @@ impl ObjectiveTrait for MinimizeDistanceKeyframeMean {
     }
 }
 
-pub struct TSRError{
+pub struct PlanningTSRError{
     pub arm_idx: usize
 }
-impl TSRError {
+impl PlanningTSRError {
     pub fn new(arm_idx: usize) -> Self {Self{arm_idx}}
 }
-impl ObjectiveTrait for TSRError {
-    fn call(&self, x: &[f64], v: &vars::AgentVars, frames: &Vec<(Vec<nalgebra::Vector3<f64>>, Vec<nalgebra::UnitQuaternion<f64>>)>) -> f64 {
+impl ObjectiveTrait for PlanningTSRError {
+    fn call(&self, _x: &[f64], v: &vars::AgentVars, frames: &Vec<(Vec<nalgebra::Vector3<f64>>, Vec<nalgebra::UnitQuaternion<f64>>)>) -> f64 {
         let last_pos_elem = frames[self.arm_idx].0.len() - 1;
         let pos = frames[self.arm_idx].0[last_pos_elem];
         let last_quat_elem = frames[0].1.len() - 1;
         let tmp = Quaternion::new(frames[0].1[last_quat_elem].w, frames[0].1[last_quat_elem].i, frames[0].1[last_quat_elem].j, frames[0].1[last_quat_elem].k);
         let unit_quat = UnitQuaternion::from_quaternion(tmp);
-        let T0_w_iso = Isometry3::new(pos, Vector3::new(unit_quat.euler_angles().0, unit_quat.euler_angles().1, unit_quat.euler_angles().2));
-        let distance_and_delta = distance_to_TSR(&T0_w_iso, &v.tsr);
-        println!("{}", distance_and_delta.0);
-        println!("{:?}", distance_and_delta.1);
-        groove_loss(distance_and_delta.0, 0.0, 2, 0.5, 10.0, 2)
+        let ts0_s_iso = Isometry3::new(pos, Vector3::new(unit_quat.euler_angles().0, unit_quat.euler_angles().1, unit_quat.euler_angles().2));
+        let distance_and_delta = distance_to_TSR(&ts0_s_iso, &v.planning_tsr);
+        // println!("{}", distance_and_delta.0);
+        // println!("{:?}", distance_and_delta.1);
+        groove_loss(distance_and_delta.0, 0.0, 2, 0.1, 10.0, 2)
     }
 
-    fn call_lite(&self, x: &[f64], v: &vars::AgentVars, ee_poses: &Vec<(nalgebra::Vector3<f64>, nalgebra::UnitQuaternion<f64>)>) -> f64 {
+    fn call_lite(&self, _x: &[f64], v: &vars::AgentVars, ee_poses: &Vec<(nalgebra::Vector3<f64>, nalgebra::UnitQuaternion<f64>)>) -> f64 {
         let pos = ee_poses[self.arm_idx].0;
         let tmp = Quaternion::new(ee_poses[self.arm_idx].1.w, ee_poses[self.arm_idx].1.i, ee_poses[self.arm_idx].1.j, ee_poses[self.arm_idx].1.k);
         let unit_quat = UnitQuaternion::from_quaternion(tmp);
-        let T0_w_iso = Isometry3::new(pos, Vector3::new(unit_quat.euler_angles().0, unit_quat.euler_angles().1, unit_quat.euler_angles().2));
-        let distance_and_delta = distance_to_TSR(&T0_w_iso, &v.tsr);
-        groove_loss(distance_and_delta.0, 0.0, 2, 0.5, 10.0, 2)
+        let ts0_s_iso = Isometry3::new(pos, Vector3::new(unit_quat.euler_angles().0, unit_quat.euler_angles().1, unit_quat.euler_angles().2));
+        let distance_and_delta = distance_to_TSR(&ts0_s_iso, &v.planning_tsr);
+        groove_loss(distance_and_delta.0, 0.0, 2, 0.1, 10.0, 2)
+    }
+}
+
+pub struct SecondaryTSRError{
+    pub arm_idx: usize
+}
+impl SecondaryTSRError {
+    pub fn new(arm_idx: usize) -> Self {Self{arm_idx}}
+}
+impl ObjectiveTrait for SecondaryTSRError {
+    fn call(&self, _x: &[f64], v: &vars::AgentVars, frames: &Vec<(Vec<nalgebra::Vector3<f64>>, Vec<nalgebra::UnitQuaternion<f64>>)>) -> f64 {
+        let last_pos_elem = frames[self.arm_idx].0.len() - 1;
+        let pos = frames[self.arm_idx].0[last_pos_elem];
+        let last_quat_elem = frames[0].1.len() - 1;
+        let tmp = Quaternion::new(frames[0].1[last_quat_elem].w, frames[0].1[last_quat_elem].i, frames[0].1[last_quat_elem].j, frames[0].1[last_quat_elem].k);
+        let unit_quat = UnitQuaternion::from_quaternion(tmp);
+        let ts0_s_iso = Isometry3::new(pos, Vector3::new(unit_quat.euler_angles().0, unit_quat.euler_angles().1, unit_quat.euler_angles().2));
+        let distance_and_delta = distance_to_TSR(&ts0_s_iso, &v.secondary_tsr);
+        // println!("{}", distance_and_delta.0);
+        // println!("{:?}", distance_and_delta.1);
+        groove_loss(distance_and_delta.0, 0.0, 2, 0.1, 10.0, 2)
+    }
+
+    fn call_lite(&self, _x: &[f64], v: &vars::AgentVars, ee_poses: &Vec<(nalgebra::Vector3<f64>, nalgebra::UnitQuaternion<f64>)>) -> f64 {
+        let pos = ee_poses[self.arm_idx].0;
+        let tmp = Quaternion::new(ee_poses[self.arm_idx].1.w, ee_poses[self.arm_idx].1.i, ee_poses[self.arm_idx].1.j, ee_poses[self.arm_idx].1.k);
+        let unit_quat = UnitQuaternion::from_quaternion(tmp);
+        let ts0_s_iso = Isometry3::new(pos, Vector3::new(unit_quat.euler_angles().0, unit_quat.euler_angles().1, unit_quat.euler_angles().2));
+        let distance_and_delta = distance_to_TSR(&ts0_s_iso, &v.secondary_tsr);
+        groove_loss(distance_and_delta.0, 0.0, 2, 0.1, 10.0, 2)
+    }
+}
+
+pub struct TSRPosGoal {
+    pub arm_idx: usize
+}
+impl TSRPosGoal {
+    pub fn new(arm_idx: usize) -> Self {Self{arm_idx}}
+}
+// impl ObjectiveTrait for TSRPosGoal {
+//     fn call(&self, _x: &[f64], v: &vars::AgentVars, frames: &Vec<(Vec<nalgebra::Vector3<f64>>, Vec<nalgebra::UnitQuaternion<f64>>)>) -> f64 {
+//         let last_pos_elem = frames[self.arm_idx].0.len() - 1;
+//         let pos = frames[self.arm_idx].0[last_pos_elem];
+//         let last_quat_elem = frames[0].1.len() - 1;
+//         let tmp = Quaternion::new(-frames[0].1[last_quat_elem].w, -frames[0].1[last_quat_elem].i, -frames[0].1[last_quat_elem].j, -frames[0].1[last_quat_elem].k);
+//         let unit_quat = UnitQuaternion::from_quaternion(tmp);
+//         let t0_s_iso = Isometry3::new(pos, Vector3::new(unit_quat.euler_angles().0, unit_quat.euler_angles().1, unit_quat.euler_angles().2));
+//         let t0_sp = t0_s_iso * v.tsr.Tw_e.inverse();
+//         // T0_sp in terms of the coordinates of the target frame w given by the Task Space Region tsr.
+//         let tw_sp = v.tsr.T0_w.inverse() * t0_sp;
+//         let mut displacements = Vec::new();
+//         displacements.push(tw_sp.translation.vector[0]);
+//         displacements.push(tw_sp.translation.vector[1]);    
+//         displacements.push(tw_sp.translation.vector[2]);
+//         let bounded_displacements = delta_x(&displacements.as_slice(), &v.tsr.Bw[0..3]);  
+//         let disp_dvec = DVector::from_vec(bounded_displacements);
+//         let x_val = disp_dvec.norm();
+
+//         groove_loss(x_val, 0., 2, 0.3, 10.0, 2)
+//     }
+
+//     fn call_lite(&self, _x: &[f64], v: &vars::AgentVars, ee_poses: &Vec<(nalgebra::Vector3<f64>, nalgebra::UnitQuaternion<f64>)>) -> f64 {
+//         let pos = ee_poses[self.arm_idx].0;
+//         let tmp = Quaternion::new(-ee_poses[0].1.w, -ee_poses[0].1.i, -ee_poses[0].1.j, -ee_poses[0].1.k);
+//         let unit_quat = UnitQuaternion::from_quaternion(tmp);
+//         let t0_s_iso = Isometry3::new(pos, Vector3::new(unit_quat.euler_angles().0, unit_quat.euler_angles().1, unit_quat.euler_angles().2));
+//         let t0_sp = t0_s_iso * v.tsr.Tw_e.inverse();
+//         // T0_sp in terms of the coordinates of the target frame w given by the Task Space Region tsr.
+//         let tw_sp = v.tsr.T0_w.inverse() * t0_sp;
+//         let mut displacements = Vec::new();
+//         displacements.push(tw_sp.translation.vector[0]);
+//         displacements.push(tw_sp.translation.vector[1]);    
+//         displacements.push(tw_sp.translation.vector[2]);
+//         let bounded_displacements = delta_x(&displacements.as_slice(), &v.tsr.Bw[0..3]);  
+//         let disp_dvec = DVector::from_vec(bounded_displacements);
+//         let x_val = disp_dvec.norm();
+
+//         groove_loss(x_val, 0., 2, 0.3, 10.0, 2)
+//     }
+// }
+
+impl ObjectiveTrait for TSRPosGoal {
+    fn call(&self, _x: &[f64], v: &vars::AgentVars, frames: &Vec<(Vec<nalgebra::Vector3<f64>>, Vec<nalgebra::UnitQuaternion<f64>>)>) -> f64 {
+        let last_pos_elem = frames[self.arm_idx].0.len() - 1;
+        let current_pos = frames[self.arm_idx].0[last_pos_elem];
+        let target_pos = v.planning_tsr.T0_w.translation.vector;       
+        let x_val = (target_pos - current_pos).norm();
+        groove_loss(x_val, 0., 2, 0.3, 10.0, 2)
+    }
+
+    fn call_lite(&self, _x: &[f64], v: &vars::AgentVars, ee_poses: &Vec<(nalgebra::Vector3<f64>, nalgebra::UnitQuaternion<f64>)>) -> f64 {
+        let current_pos = ee_poses[self.arm_idx].0;
+        let target_pos = v.planning_tsr.T0_w.translation.vector;       
+        let x_val = (target_pos - current_pos).norm();
+        groove_loss(x_val, 0., 2, 0.3, 10.0, 2)
+    }
+}
+
+
+pub struct TSRQuatGoal {
+    pub arm_idx: usize
+}
+impl TSRQuatGoal {
+    pub fn new(arm_idx: usize) -> Self {Self{arm_idx}}
+}
+impl ObjectiveTrait for TSRQuatGoal {
+    // fn call(&self, _x: &[f64], v: &vars::AgentVars, frames: &Vec<(Vec<nalgebra::Vector3<f64>>, Vec<nalgebra::UnitQuaternion<f64>>)>) -> f64 {
+    //     let last_pos_elem = frames[self.arm_idx].0.len() - 1;
+    //     let pos = frames[self.arm_idx].0[last_pos_elem];
+    //     let last_quat_elem = frames[0].1.len() - 1;
+    //     let tmp = Quaternion::new(frames[0].1[last_quat_elem].w, frames[0].1[last_quat_elem].i, frames[0].1[last_quat_elem].j, frames[0].1[last_quat_elem].k);
+    //     let unit_quat = UnitQuaternion::from_quaternion(tmp);
+    //     let t0_s_iso = Isometry3::new(pos, Vector3::new(unit_quat.euler_angles().0, unit_quat.euler_angles().1, unit_quat.euler_angles().2));
+    //     let t0_sp = t0_s_iso * v.tsr.Tw_e.inverse();
+    //     // T0_sp in terms of the coordinates of the target frame w given by the Task Space Region tsr.
+    //     let tw_sp = v.tsr.T0_w.inverse() * t0_sp;
+    //     let quat = nalgebra::try_convert(tw_sp.rotation).unwrap();
+    //     let id_quat = UnitQuaternion::from_quaternion(Quaternion::identity());
+    //     let x_val = angle_between(quat, id_quat);
+    
+    //     groove_loss(x_val, 0., 2, 0.3, 10.0, 2)
+    // }
+
+    // fn call_lite(&self, _x: &[f64], v: &vars::AgentVars, ee_poses: &Vec<(nalgebra::Vector3<f64>, nalgebra::UnitQuaternion<f64>)>) -> f64 {
+    //     let pos = ee_poses[self.arm_idx].0;
+    //     let tmp = Quaternion::new(ee_poses[0].1.w, ee_poses[0].1.i, ee_poses[0].1.j, ee_poses[0].1.k);
+    //     let unit_quat = UnitQuaternion::from_quaternion(tmp);
+    //     let t0_s_iso = Isometry3::new(pos, Vector3::new(unit_quat.euler_angles().0, unit_quat.euler_angles().1, unit_quat.euler_angles().2));
+    //     let t0_sp = t0_s_iso * v.tsr.Tw_e.inverse();
+    //     // T0_sp in terms of the coordinates of the target frame w given by the Task Space Region tsr.
+    //     let tw_sp = v.tsr.T0_w.inverse() * t0_sp;
+    //     let quat = nalgebra::try_convert(tw_sp.rotation).unwrap();
+    //     let id_quat = UnitQuaternion::from_quaternion(Quaternion::identity());
+    //     let x_val = angle_between(quat, id_quat);
+    
+
+    //     groove_loss(x_val, 0., 2, 0.3, 10.0, 2)
+    // }
+
+    fn call(&self, x: &[f64], v: &vars::AgentVars, frames: &Vec<(Vec<nalgebra::Vector3<f64>>, Vec<nalgebra::UnitQuaternion<f64>>)>) -> f64 {
+        let last_elem = frames[self.arm_idx].1.len() - 1;
+        let tmp = Quaternion::new(-frames[self.arm_idx].1[last_elem].w, -frames[self.arm_idx].1[last_elem].i, -frames[self.arm_idx].1[last_elem].j, -frames[self.arm_idx].1[last_elem].k);
+        let ee_quat2 = UnitQuaternion::from_quaternion(tmp);
+        let target_quat = nalgebra::try_convert(v.planning_tsr.T0_w.rotation).unwrap();
+        let disp = angle_between(target_quat, frames[self.arm_idx].1[last_elem]);
+        let disp2 = angle_between(target_quat, ee_quat2);
+        let x_val = disp.min(disp2);
+        groove_loss(x_val, 0., 2, 0.1, 10.0, 2)
+    }
+
+    fn call_lite(&self, x: &[f64], v: &vars::AgentVars, ee_poses: &Vec<(nalgebra::Vector3<f64>, nalgebra::UnitQuaternion<f64>)>) -> f64 {
+        let tmp = Quaternion::new(-ee_poses[self.arm_idx].1.w, -ee_poses[self.arm_idx].1.i, -ee_poses[self.arm_idx].1.j, -ee_poses[self.arm_idx].1.k);
+        let ee_quat2 = UnitQuaternion::from_quaternion(tmp);
+
+        let target_quat = nalgebra::try_convert(v.planning_tsr.T0_w.rotation).unwrap();
+        let disp = angle_between(target_quat, ee_poses[self.arm_idx].1);
+        let disp2 = angle_between(target_quat, ee_quat2);
+        let x_val = disp.min(disp2);
+        groove_loss(x_val, 0., 2, 0.1, 10.0, 2)
     }
 }

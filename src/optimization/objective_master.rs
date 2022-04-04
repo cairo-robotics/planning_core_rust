@@ -94,29 +94,31 @@ impl ObjectiveMaster {
         let mut objectives: Vec<Box<dyn ObjectiveTrait + Send>> = Vec::new();
         let mut weight_priors: Vec<f64> = Vec::new();
         for i in 0..num_chains {
-            objectives.push(Box::new(MatchEEPosGoals::new(i)));
-            weight_priors.push(5.0);
-            objectives.push(Box::new(MatchEEQuatGoals::new(i)));
-            if objective_mode == "ECA3" {
-                weight_priors.push(0.0);
-            } else if objective_mode == "ECAA" {
-                weight_priors.push(5.0);
-            } else {
-                weight_priors.push(5.0);
-            }
             objectives.push(Box::new(EnvCollision::new(i)));
             if objective_mode == "noECA" {
                 weight_priors.push(0.0);
             } else {
                 weight_priors.push(1.0);
             }
+            objectives.push(Box::new(PlanningTSRError::new(i)));
+            weight_priors.push(7.0);
+            // objectives.push(Box::new(MatchEEPosGoals::new(i)));
+            // weight_priors.push(1.0);
+            // objectives.push(Box::new(MatchEEQuatGoals::new(i)));
+            // weight_priors.push(1.0);
         }
+        objectives.push(Box::new(MinimizeVelocity));
+        weight_priors.push(7.0);
+        objectives.push(Box::new(MinimizeAcceleration));
+        weight_priors.push(2.0);
+        objectives.push(Box::new(MinimizeJerk));
+        weight_priors.push(1.0);
         objectives.push(Box::new(JointLimits));
         weight_priors.push(1.0);
         objectives.push(Box::new(NNSelfCollision));
         weight_priors.push(1.0);
         objectives.push(Box::new(MinimizeDistanceKeyframeMean));
-        weight_priors.push(0.05);
+        weight_priors.push(5.0);
 
         Self {
             objectives,
@@ -137,15 +139,67 @@ impl ObjectiveMaster {
             } else {
                 weight_priors.push(1.0);
             }
-            objectives.push(Box::new(TSRError::new(i)));
+            objectives.push(Box::new(PlanningTSRError::new(i)));
             weight_priors.push(5.0);
+            // objectives.push(Box::new(MatchEEPosGoals::new(i)));
+            // weight_priors.push(1.0);
+            // objectives.push(Box::new(MatchEEQuatGoals::new(i)));
+            // weight_priors.push(1.0);
+            
         }
-        // objectives.push(Box::new(MinimizeVelocity));
-        // weight_priors.push(7.0);
-        // objectives.push(Box::new(MinimizeAcceleration));
-        // weight_priors.push(2.0);
-        // objectives.push(Box::new(MinimizeJerk));
-        // weight_priors.push(1.0);
+        objectives.push(Box::new(MinimizeVelocity));
+        weight_priors.push(7.0);
+        objectives.push(Box::new(MinimizeAcceleration));
+        weight_priors.push(2.0);
+        objectives.push(Box::new(MinimizeJerk));
+        weight_priors.push(1.0);
+        objectives.push(Box::new(JointLimits));
+        weight_priors.push(1.0);
+        objectives.push(Box::new(NNSelfCollision));
+        weight_priors.push(1.0);
+        Self {
+            objectives,
+            num_chains,
+            weight_priors,
+            lite: false,
+            finite_diff_grad: true,
+        }
+    }
+
+    pub fn tsr_collision_ik(num_chains: usize, objective_mode: String) -> Self {
+        let mut objectives: Vec<Box<dyn ObjectiveTrait + Send>> = Vec::new();
+        let mut weight_priors: Vec<f64> = Vec::new();
+        for i in 0..num_chains {
+            objectives.push(Box::new(MatchEEPosGoals::new(i)));
+            weight_priors.push(1.0);
+            objectives.push(Box::new(MatchEEQuatGoals::new(i)));
+            if objective_mode == "ECA3" {
+                weight_priors.push(0.0);
+            } else if objective_mode == "ECAA" {
+                weight_priors.push(1.0);
+            } else {
+                weight_priors.push(1.0);
+            }
+            objectives.push(Box::new(EnvCollision::new(i)));
+            if objective_mode == "noECA" {
+                weight_priors.push(0.0);
+            } else {
+                weight_priors.push(1.0);
+            }
+            objectives.push(Box::new(PlanningTSRError::new(i)));
+            weight_priors.push(1.0);
+            // objectives.push(Box::new(MatchEEPosGoals::new(i)));
+            // weight_priors.push(1.0);
+            // objectives.push(Box::new(MatchEEQuatGoals::new(i)));
+            // weight_priors.push(1.0);
+            
+        }
+        objectives.push(Box::new(MinimizeVelocity));
+        weight_priors.push(7.0);
+        objectives.push(Box::new(MinimizeAcceleration));
+        weight_priors.push(2.0);
+        objectives.push(Box::new(MinimizeJerk));
+        weight_priors.push(1.0);
         objectives.push(Box::new(JointLimits));
         weight_priors.push(1.0);
         objectives.push(Box::new(NNSelfCollision));
