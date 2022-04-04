@@ -401,8 +401,6 @@ impl EnvCollisionFileParser {
                 let path_to_src = Path::new(&path_to_src_str);
                 let point_cloud_file_name = point_cloud_list[i]["file"].as_str().unwrap();
                 let point_cloud_path = path_to_src.join(Path::new("geometry_files")).join(Path::new(point_cloud_file_name));
-                let pcp_clone = point_cloud_path.clone();
-                println!("yaml_utils line 406 point_cloud_path: {}", pcp_clone.into_os_string().into_string().unwrap());
                 let point_cloud_file = File::open(point_cloud_path).unwrap();
                 let lines: Vec<Result<String, io::Error>> = io::BufReader::new(point_cloud_file).lines().collect();
                 for line in lines {
