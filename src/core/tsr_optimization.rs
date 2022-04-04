@@ -27,7 +27,7 @@ impl TSROptimization {
 
     pub fn from_yaml_path(fp: String, mode: usize) -> Self {
         let vars = AgentVars::from_yaml_path(fp.clone(), false, false);
-        let mut om = ObjectiveMaster::tsr_optimize(vars.robot.num_chains, vars.objective_mode.clone());
+        let mut om = ObjectiveMaster::tsr_collision_ik(vars.robot.num_chains, vars.objective_mode.clone());
         if mode == 0 {
             om = ObjectiveMaster::standard_ik(vars.robot.num_chains);
         }
@@ -45,15 +45,27 @@ impl TSROptimization {
         TSROptimization::from_info_file_name(info_file_name.clone(), mode.clone())
     }
 
-    pub fn solve(&mut self) -> Vec<f64> {
+    pub fn solve(&mut self, ee_sub: &EEPoseGoalsSubscriber) -> Vec<f64> {
         let mut out_x = self.vars.xopt.clone();
+
+        if self.vars.rotation_mode_relative {
+            for i in 0..self.vars.robot.num_chains {
+                self.vars.goal_positions[i] = self.vars.init_ee_positions[i] + ee_sub.pos_goals[i];
+                self.vars.goal_quats[i] = ee_sub.quat_goals[i] * self.vars.init_ee_quats[i];
+            }
+        } else {
+            for i in 0..self.vars.robot.num_chains  {
+                self.vars.goal_positions[i] = ee_sub.pos_goals[i].clone();
+                self.vars.goal_quats[i] = ee_sub.quat_goals[i].clone();
+            }
+        }
 
         let in_collision = self.vars.update_collision_world();
         if !in_collision {
             if self.vars.objective_mode == "ECAA" {
                 self.om.tune_weight_priors(&self.vars);
             }
-            self.groove.optimize(&mut out_x, &self.vars, &self.om, 200);
+            self.groove.optimize(&mut out_x, &self.vars, &self.om, 100);
             self.vars.update(out_x.clone());  
         }  
         out_x

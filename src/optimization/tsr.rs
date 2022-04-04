@@ -31,7 +31,11 @@ pub fn distance_to_TSR(T0_s: &Isometry3<f64>, tsr: &TSR) -> (f64, Vec<f64>) {
     // T0_sp in terms of the coordinates of the target frame w given by the Task Space Region tsr.
     let Tw_sp = tsr.T0_w.inverse() * T0_sp;
     // Generate the displacement vector of Tw_sp. Displacement represents the error given T0_s relative to Tw_e transform.
-    let disp = displacement(&Tw_sp);
+    let mut disp = displacement(&Tw_sp);
+    // // We want the global translation, not the translation dependent on rotation between the transformations.
+    // disp[0] = T0_sp.translation.x - tsr.T0_w.translation.x;
+    // disp[1] = T0_sp.translation.y - tsr.T0_w.translation.y;
+    // disp[2] = T0_sp.translation.z - tsr.T0_w.translation.z;
     // Since there are equivalent angle displacements for rpy, generate those equivalents by added +/- PI.
     // Use the smallest delta_x_dist of the equivalency set.
     let rpys = generate_equivalent_euler_angles(&disp[2..6]);

@@ -151,16 +151,29 @@ impl Agent {
         Ok(())
     }
 
-    fn update_tsr(
+    fn update_planning_tsr(
         &mut self,
         T0_w_pose: Vec<f64>,
         Tw_e_pose: Vec<f64>,
         Bw: Vec<Vec<f64>>,
     ) -> PyResult<()> {
-        self.agent_vars.tsr = TSR::new_from_poses(&T0_w_pose, &Tw_e_pose, &Bw);
-        self.relaxed_ik.lock().unwrap().vars.tsr = TSR::new_from_poses(&T0_w_pose, &Tw_e_pose, &Bw);
-        self.omega_opt.lock().unwrap().vars.tsr = TSR::new_from_poses(&T0_w_pose, &Tw_e_pose, &Bw);
-        self.tsr_opt.lock().unwrap().vars.tsr = TSR::new_from_poses(&T0_w_pose, &Tw_e_pose, &Bw);
+        self.agent_vars.planning_tsr = TSR::new_from_poses(&T0_w_pose, &Tw_e_pose, &Bw);
+        self.relaxed_ik.lock().unwrap().vars.planning_tsr = TSR::new_from_poses(&T0_w_pose, &Tw_e_pose, &Bw);
+        self.omega_opt.lock().unwrap().vars.planning_tsr = TSR::new_from_poses(&T0_w_pose, &Tw_e_pose, &Bw);
+        self.tsr_opt.lock().unwrap().vars.planning_tsr = TSR::new_from_poses(&T0_w_pose, &Tw_e_pose, &Bw);
+        Ok(())
+    }
+
+    fn update_secondary_tsr(
+        &mut self,
+        T0_w_pose: Vec<f64>,
+        Tw_e_pose: Vec<f64>,
+        Bw: Vec<Vec<f64>>,
+    ) -> PyResult<()> {
+        self.agent_vars.secondary_tsr = TSR::new_from_poses(&T0_w_pose, &Tw_e_pose, &Bw);
+        self.relaxed_ik.lock().unwrap().vars.secondary_tsr = TSR::new_from_poses(&T0_w_pose, &Tw_e_pose, &Bw);
+        self.omega_opt.lock().unwrap().vars.secondary_tsr = TSR::new_from_poses(&T0_w_pose, &Tw_e_pose, &Bw);
+        self.tsr_opt.lock().unwrap().vars.secondary_tsr = TSR::new_from_poses(&T0_w_pose, &Tw_e_pose, &Bw);
         Ok(())
     }
 
@@ -188,10 +201,7 @@ impl Agent {
         Ok(())
     }
 
-    fn omega_optimize(
-        &mut self,
-        keyframe_mean_config: Vec<f64>
-    ) -> PyResult<Opt> {
+    fn omega_optimize(&mut self, keyframe_mean_config: Vec<f64>) -> PyResult<Opt> {
         // let _ = self.update_xopt(best_guess);
         let _ = self.update_keyframe_mean(keyframe_mean_config);
 
@@ -205,9 +215,39 @@ impl Agent {
         })
     }
 
-    fn tsr_optimize(&mut self) -> PyResult<Opt> {
-        let ja = self.tsr_opt.lock().unwrap().solve();
+    fn tsr_optimize(&mut self, pos_vec: Vec<f64>, quat_vec: Vec<f64>) -> PyResult<Opt> {
+        let arc = Arc::new(Mutex::new(EEPoseGoalsSubscriber::new()));
+        let mut g = arc.lock().unwrap();
+
+        g.pos_goals
+            .push(Vector3::new(pos_vec[0], pos_vec[1], pos_vec[2]));
+        let tmp_q = Quaternion::new(quat_vec[0], quat_vec[1], quat_vec[2], quat_vec[3]);
+        g.quat_goals.push(UnitQuaternion::from_quaternion(tmp_q));
+
+        let ja = self.tsr_opt.lock().unwrap().solve(&g).clone();
         let len = ja.len();
+        Ok(Opt {
+            data: ja,
+            length: len,
+        })
+    }
+
+    fn tsr_collision_inverse_kinematics(
+        &mut self,
+        pos_vec: Vec<f64>,
+        quat_vec: Vec<f64>,
+    ) -> PyResult<Opt> {
+        let arc = Arc::new(Mutex::new(EEPoseGoalsSubscriber::new()));
+        let mut g = arc.lock().unwrap();
+
+        g.pos_goals
+            .push(Vector3::new(pos_vec[0], pos_vec[1], pos_vec[2]));
+        let tmp_q = Quaternion::new(quat_vec[0], quat_vec[1], quat_vec[2], quat_vec[3]);
+        g.quat_goals.push(UnitQuaternion::from_quaternion(tmp_q));
+
+        let ja = self.tsr_opt.lock().unwrap().solve(&g).clone();
+        let len = ja.len();
+
         Ok(Opt {
             data: ja,
             length: len,
@@ -245,12 +285,23 @@ fn init_agent_vars(
 
     let fp = get_path_to_config() + "/settings.yaml";
     let fp2 = fp.clone();
-    println!("AgentVars from_yaml_path {}", fp);
     let env_collision_file = EnvCollisionFileParser::from_yaml_path(fp);
     let frames = robot.get_frames_immutable(&ifp.starting_config.clone());
     let env_collision = RelaxedIKEnvCollision::init_collision_world(env_collision_file, &frames);
     let objective_mode = get_objective_mode(fp2);
-    let tsr = TSR::new_from_poses(
+    let planning_tsr = TSR::new_from_poses(
+        &vec![0.0f64, 0.0, 0.0, 0.0, 0.0, 0.0],
+        &vec![0.0f64, 0.0, 0.0, 0.0, 0.0, 0.0],
+        &vec![
+            vec![-100.0f64, 100.0],
+            vec![-100.0f64, 100.0],
+            vec![-100.0f64, 100.0],
+            vec![-3.14f64, 3.14],
+            vec![-3.14f64, 3.14],
+            vec![-3.14f64, 3.14],
+        ],
+    );
+    let secondary_tsr = TSR::new_from_poses(
         &vec![0.0f64, 0.0, 0.0, 0.0, 0.0, 0.0],
         &vec![0.0f64, 0.0, 0.0, 0.0, 0.0, 0.0],
         &vec![
@@ -281,7 +332,8 @@ fn init_agent_vars(
         env_collision,
         objective_mode,
         keyframe_mean: ifp.starting_config.clone(),
-        tsr: tsr,
+        planning_tsr: planning_tsr,
+        secondary_tsr: secondary_tsr
     };
     agent_vars
 }
