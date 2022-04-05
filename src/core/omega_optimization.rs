@@ -22,11 +22,11 @@ impl OmegaOptimization {
     pub fn from_info_file_name(info_file_name: String, mode: usize) -> Self {
         let path_to_src = get_path_to_config();
         let fp = path_to_src + "/info_files/" + info_file_name.as_str();
-        OmegaOptimization::from_yaml_path(fp.clone(), mode.clone())
+        OmegaOptimization::from_yaml_path(fp.clone(), mode.clone(), false, false)
     }
 
-    pub fn from_yaml_path(fp: String, mode: usize) -> Self {
-        let vars = AgentVars::from_yaml_path(fp.clone(), false, false);
+    pub fn from_yaml_path(fp: String, mode: usize, position_mode_relative: bool, rotation_mode_relative: bool) -> Self {
+        let vars = AgentVars::from_yaml_path(fp.clone(), position_mode_relative, rotation_mode_relative);
         let mut om = ObjectiveMaster::omega_optimize(vars.robot.num_chains, vars.objective_mode.clone());
         if mode == 0 {
             om = ObjectiveMaster::standard_ik(vars.robot.num_chains);

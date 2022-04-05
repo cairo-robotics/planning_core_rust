@@ -39,12 +39,14 @@ impl Agent {
         let relaxed_ik: Arc<Mutex<RelaxedIK>> = Arc::new(Mutex::new(RelaxedIK::from_yaml_path(
             settings_fp.clone(),
             1,
+            position_mode_relative, 
+            rotation_mode_relative
         )));
         let omega_opt: Arc<Mutex<OmegaOptimization>> = Arc::new(Mutex::new(
-            OmegaOptimization::from_yaml_path(settings_fp.clone(), 1),
+            OmegaOptimization::from_yaml_path(settings_fp.clone(), 1, position_mode_relative, rotation_mode_relative),
         ));
         let tsr_opt: Arc<Mutex<TSROptimization>> = Arc::new(Mutex::new(
-            TSROptimization::from_yaml_path(settings_fp.clone(), 1),
+            TSROptimization::from_yaml_path(settings_fp.clone(), 1, position_mode_relative, rotation_mode_relative),
         ));
         return Agent {
             agent_vars,
