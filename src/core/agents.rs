@@ -94,7 +94,7 @@ impl Agent {
         Ok(pose)
     }
 
-    fn relaxed_inverse_kinematics(
+    fn collision_ik(
         &mut self,
         pos_vec: Vec<f64>,
         quat_vec: Vec<f64>,
@@ -102,14 +102,15 @@ impl Agent {
         let arc = Arc::new(Mutex::new(EEPoseGoalsSubscriber::new()));
         let mut g = arc.lock().unwrap();
 
-        g.pos_goals
-            .push(Vector3::new(pos_vec[0], pos_vec[1], pos_vec[2]));
-        let tmp_q = Quaternion::new(quat_vec[0], quat_vec[1], quat_vec[2], quat_vec[3]);
-        g.quat_goals.push(UnitQuaternion::from_quaternion(tmp_q));
+        for i in 0..self.agent_vars.robot.num_chains {
+            g.pos_goals.push( Vector3::new(pos_vec[3*i], pos_vec[3*i+1], pos_vec[3*i+2]) );
+            let tmp_q = Quaternion::new(quat_vec[4*i+3], quat_vec[4*i], quat_vec[4*i+1], quat_vec[4*i+2]);
+            g.quat_goals.push( UnitQuaternion::from_quaternion(tmp_q) );
+        }
 
         let ja = self.relaxed_ik.lock().unwrap().solve(&g).clone();
         let len = ja.len();
-
+        let _ = self.update_xopt(ja.clone());
         Ok(Opt {
             data: ja,
             length: len,
@@ -122,6 +123,7 @@ impl Agent {
         pos_vec: Vec<f64>,
         quat_vec: Vec<f64>,
     ) -> PyResult<()> {
+        
         let ts = Translation3::new(pos_vec[0], pos_vec[1], pos_vec[2]);
         let tmp_q = Quaternion::new(quat_vec[3], quat_vec[0], quat_vec[1], quat_vec[2]);
         let rot = UnitQuaternion::from_quaternion(tmp_q);
