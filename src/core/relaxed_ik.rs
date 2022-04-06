@@ -38,7 +38,7 @@ impl RelaxedIK {
     pub fn from_info_file_name(info_file_name: String, mode: usize) -> Self {
         let path_to_src = get_path_to_config();
         let fp = path_to_src + "/info_files/" + info_file_name.as_str();
-        RelaxedIK::from_yaml_path(fp.clone(), mode.clone(), false, false)
+        RelaxedIK::from_yaml_path(fp.clone(), mode.clone(), true, true)
     }
 
     pub fn from_yaml_path(fp: String, mode: usize, position_mode_relative: bool, rotation_mode_relative: bool) -> Self {
@@ -75,15 +75,14 @@ impl RelaxedIK {
                 self.vars.goal_quats[i] = ee_sub.quat_goals[i].clone();
             }
         }
-
         let in_collision = self.vars.update_collision_world();
         if !in_collision {
             if self.vars.objective_mode == "ECAA" {
                 self.om.tune_weight_priors(&self.vars);
             }
             self.groove.optimize(&mut out_x, &self.vars, &self.om, 100);
-            self.vars.update(out_x.clone());  
-        }  
+        }
+        self.vars.update(out_x.clone());   
         out_x
     }
 

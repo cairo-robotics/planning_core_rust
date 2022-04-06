@@ -22,7 +22,7 @@ impl TSROptimization {
     pub fn from_info_file_name(info_file_name: String, mode: usize) -> Self {
         let path_to_src = get_path_to_config();
         let fp = path_to_src + "/info_files/" + info_file_name.as_str();
-        TSROptimization::from_yaml_path(fp.clone(), mode.clone(), false, false)
+        TSROptimization::from_yaml_path(fp.clone(), mode.clone(), true, true)
     }
 
     pub fn from_yaml_path(fp: String, mode: usize, position_mode_relative: bool, rotation_mode_relative: bool) -> Self {
