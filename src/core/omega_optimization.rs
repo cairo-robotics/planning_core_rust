@@ -1,14 +1,11 @@
-use pyo3::prelude::*;
-
 use crate::core::vars::AgentVars;
 use crate::optimization::opt::{OptimizationEngineOpen, OptimizationEngineNLopt};
 use crate::optimization::objective_master::ObjectiveMaster;
 use crate::utils_rust::file_utils::{*};
-use crate::utils_rust::subscriber_utils::EEPoseGoalsSubscriber;
+
 use crate::utils_rust::transformations::{*};
 use crate::utils_rust::yaml_utils::{*};
-use nalgebra::{Vector3, UnitQuaternion, Quaternion};
-use crate::utils_rust::sampler::ThreadSampler;
+
 
 
 pub struct OmegaOptimization {
@@ -26,6 +23,7 @@ impl OmegaOptimization {
     }
 
     pub fn from_yaml_path(fp: String, mode: usize, position_mode_relative: bool, rotation_mode_relative: bool) -> Self {
+        println!("{}", fp.clone());
         let vars = AgentVars::from_yaml_path(fp.clone(), position_mode_relative, rotation_mode_relative);
         let mut om = ObjectiveMaster::omega_optimize(vars.robot.num_chains, vars.objective_mode.clone());
         if mode == 0 {

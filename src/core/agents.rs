@@ -39,15 +39,23 @@ impl Agent {
         let relaxed_ik: Arc<Mutex<RelaxedIK>> = Arc::new(Mutex::new(RelaxedIK::from_yaml_path(
             settings_fp.clone(),
             1,
-            position_mode_relative, 
-            rotation_mode_relative
+            position_mode_relative,
+            rotation_mode_relative,
         )));
-        let omega_opt: Arc<Mutex<OmegaOptimization>> = Arc::new(Mutex::new(
-            OmegaOptimization::from_yaml_path(settings_fp.clone(), 1, position_mode_relative, rotation_mode_relative),
-        ));
-        let tsr_opt: Arc<Mutex<TSROptimization>> = Arc::new(Mutex::new(
-            TSROptimization::from_yaml_path(settings_fp.clone(), 1, position_mode_relative, rotation_mode_relative),
-        ));
+        let omega_opt: Arc<Mutex<OmegaOptimization>> =
+            Arc::new(Mutex::new(OmegaOptimization::from_yaml_path(
+                settings_fp.clone(),
+                1,
+                position_mode_relative,
+                rotation_mode_relative,
+            )));
+        let tsr_opt: Arc<Mutex<TSROptimization>> =
+            Arc::new(Mutex::new(TSROptimization::from_yaml_path(
+                settings_fp.clone(),
+                1,
+                position_mode_relative,
+                rotation_mode_relative,
+            )));
         return Agent {
             agent_vars,
             relaxed_ik,
@@ -94,18 +102,23 @@ impl Agent {
         Ok(pose)
     }
 
-    fn collision_ik(
-        &mut self,
-        pos_vec: Vec<f64>,
-        quat_vec: Vec<f64>,
-    ) -> PyResult<Opt> {
+    fn collision_ik(&mut self, pos_vec: Vec<f64>, quat_vec: Vec<f64>) -> PyResult<Opt> {
         let arc = Arc::new(Mutex::new(EEPoseGoalsSubscriber::new()));
         let mut g = arc.lock().unwrap();
 
         for i in 0..self.agent_vars.robot.num_chains {
-            g.pos_goals.push( Vector3::new(pos_vec[3*i], pos_vec[3*i+1], pos_vec[3*i+2]) );
-            let tmp_q = Quaternion::new(quat_vec[4*i+3], quat_vec[4*i], quat_vec[4*i+1], quat_vec[4*i+2]);
-            g.quat_goals.push( UnitQuaternion::from_quaternion(tmp_q) );
+            g.pos_goals.push(Vector3::new(
+                pos_vec[3 * i],
+                pos_vec[3 * i + 1],
+                pos_vec[3 * i + 2],
+            ));
+            let tmp_q = Quaternion::new(
+                quat_vec[4 * i + 3],
+                quat_vec[4 * i],
+                quat_vec[4 * i + 1],
+                quat_vec[4 * i + 2],
+            );
+            g.quat_goals.push(UnitQuaternion::from_quaternion(tmp_q));
         }
 
         let ja = self.relaxed_ik.lock().unwrap().solve(&g).clone();
@@ -123,7 +136,6 @@ impl Agent {
         pos_vec: Vec<f64>,
         quat_vec: Vec<f64>,
     ) -> PyResult<()> {
-        
         let ts = Translation3::new(pos_vec[0], pos_vec[1], pos_vec[2]);
         let tmp_q = Quaternion::new(quat_vec[3], quat_vec[0], quat_vec[1], quat_vec[2]);
         let rot = UnitQuaternion::from_quaternion(tmp_q);
@@ -162,9 +174,12 @@ impl Agent {
         Bw: Vec<Vec<f64>>,
     ) -> PyResult<()> {
         self.agent_vars.planning_tsr = TSR::new_from_poses(&T0_w_pose, &Tw_e_pose, &Bw);
-        self.relaxed_ik.lock().unwrap().vars.planning_tsr = TSR::new_from_poses(&T0_w_pose, &Tw_e_pose, &Bw);
-        self.omega_opt.lock().unwrap().vars.planning_tsr = TSR::new_from_poses(&T0_w_pose, &Tw_e_pose, &Bw);
-        self.tsr_opt.lock().unwrap().vars.planning_tsr = TSR::new_from_poses(&T0_w_pose, &Tw_e_pose, &Bw);
+        self.relaxed_ik.lock().unwrap().vars.planning_tsr =
+            TSR::new_from_poses(&T0_w_pose, &Tw_e_pose, &Bw);
+        self.omega_opt.lock().unwrap().vars.planning_tsr =
+            TSR::new_from_poses(&T0_w_pose, &Tw_e_pose, &Bw);
+        self.tsr_opt.lock().unwrap().vars.planning_tsr =
+            TSR::new_from_poses(&T0_w_pose, &Tw_e_pose, &Bw);
         Ok(())
     }
 
@@ -175,9 +190,12 @@ impl Agent {
         Bw: Vec<Vec<f64>>,
     ) -> PyResult<()> {
         self.agent_vars.secondary_tsr = TSR::new_from_poses(&T0_w_pose, &Tw_e_pose, &Bw);
-        self.relaxed_ik.lock().unwrap().vars.secondary_tsr = TSR::new_from_poses(&T0_w_pose, &Tw_e_pose, &Bw);
-        self.omega_opt.lock().unwrap().vars.secondary_tsr = TSR::new_from_poses(&T0_w_pose, &Tw_e_pose, &Bw);
-        self.tsr_opt.lock().unwrap().vars.secondary_tsr = TSR::new_from_poses(&T0_w_pose, &Tw_e_pose, &Bw);
+        self.relaxed_ik.lock().unwrap().vars.secondary_tsr =
+            TSR::new_from_poses(&T0_w_pose, &Tw_e_pose, &Bw);
+        self.omega_opt.lock().unwrap().vars.secondary_tsr =
+            TSR::new_from_poses(&T0_w_pose, &Tw_e_pose, &Bw);
+        self.tsr_opt.lock().unwrap().vars.secondary_tsr =
+            TSR::new_from_poses(&T0_w_pose, &Tw_e_pose, &Bw);
         Ok(())
     }
 
@@ -337,7 +355,7 @@ fn init_agent_vars(
         objective_mode,
         keyframe_mean: ifp.starting_config.clone(),
         planning_tsr: planning_tsr,
-        secondary_tsr: secondary_tsr
+        secondary_tsr: secondary_tsr,
     };
     agent_vars
 }
