@@ -10,7 +10,7 @@ crate-type = ["cdylib"]
 
 [dependencies]
 pyo3 = { version = "0.15.1", features = ["extension-module"] }
-nalgebra = "0.19"
+nalgebra = "0.27"
 yaml-rust = "0.4"
 optimization_engine = "0.6.0"
 ndarray = "0.13.0"
