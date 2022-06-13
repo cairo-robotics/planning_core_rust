@@ -1,11 +1,14 @@
 use crate::utils_rust::yaml_utils::NeuralNetParser;
-use crate::utils_rust::{geometry_utils, yaml_utils};
 use crate::spacetime::robot::Robot;
-use nalgebra::{DMatrix, DVector};
+use nalgebra::DMatrix;
 
-fn relu(x: f64) -> f64 {
-    x.max(0.0)
+fn relu(mut x: f64) {
+    x = x.max(0.0)
 }
+
+// let relu = |x| {
+//     x.max(0.0)
+// };
 
 fn relu_prime(x: f64) -> f64 {
     if x<= 0.0 {
@@ -50,8 +53,6 @@ pub fn state_to_jt_pt_vec(x: &Vec<f64>, robot: &Robot) -> Vec<f64> {
     out_vec
 }
 
-
-
 pub struct CollisionNN {
     pub coef_matrices: Vec<DMatrix<f64>>,
     pub intercept_vectors: Vec<DMatrix<f64>>,
@@ -83,12 +84,12 @@ impl CollisionNN {
         }
 
         self.__intermediate_vecs[0] = &self.__x_proxy * &self.coef_matrices[0] + &self.intercept_vectors[0];
-        self.__intermediate_vecs[0].apply(relu);
+        self.__intermediate_vecs[0].apply(|x| relu(*x));
 
 
         for i in 1..self.coef_matrices.len() {
             self.__intermediate_vecs[i] =  &self.__intermediate_vecs[i-1] * &self.coef_matrices[i] + &self.intercept_vectors[i];
-            self.__intermediate_vecs[i].apply(relu);
+            self.__intermediate_vecs[i].apply(|x| relu(*x));
         }
 
         self.result = self.__intermediate_vecs[self.input_length-1][0];
@@ -101,7 +102,7 @@ impl CollisionNN {
         }
         for i in 0..self.coef_matrices.len() {
             x_vec =  x_vec * &self.coef_matrices[i] + &self.intercept_vectors[i];
-            x_vec.apply(relu);
+            x_vec.apply(|x| relu(*x));
         }
 
         x_vec[0]
@@ -128,7 +129,7 @@ impl CollisionNN {
         let mut first = true;
         for i in 0..self.coef_matrices.len() {
             x_vec =  x_vec * &self.coef_matrices[i] + &self.intercept_vectors[i];
-            x_vec.apply(relu);
+            x_vec.apply(|x| relu(*x));
             let j = get_relu_jacobian(&x_vec);
             if first {
                 grad = j * &self.coef_matrices[i].transpose();
@@ -156,7 +157,7 @@ impl CollisionNN {
         let mut first = true;
         for i in 0..self.coef_matrices.len() {
             x_vec =  x_vec * &self.coef_matrices[i] + &self.intercept_vectors[i];
-            x_vec.apply(relu);
+            x_vec.apply(|x| relu(*x));
             if first {
                 let j = get_relu_jacobian_mul(&x_vec, &self.coef_matrices[i].transpose());
                 grad = j;
@@ -221,7 +222,7 @@ impl CollisionNNJointPoint {
         }
         for i in 0..self.coef_matrices.len() {
             x_vec =  x_vec * &self.coef_matrices[i] + &self.intercept_vectors[i];
-            x_vec.apply(relu);
+            x_vec.apply(|x| relu(*x));
         }
         x_vec[0]
     }
