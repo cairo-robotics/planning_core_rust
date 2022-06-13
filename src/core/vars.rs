@@ -63,13 +63,11 @@ impl AgentVars {
             get_path_to_config() + "/collision_nn_rust/" + ifp.collision_nn_file.as_str() + ".yaml";
         let collision_nn = CollisionNN::from_yaml_path(collision_nn_path);
 
-        let fp = get_path_to_config() + "/settings.yaml";
-        let fp2 = fp.clone();
-        let env_collision_file = EnvCollisionFileParser::from_yaml_path(fp);
+        let env_collision_file = EnvCollisionFileParser::from_yaml_path(settings_fp.clone());
         let frames = robot.get_frames_immutable(&ifp.starting_config.clone());
         let env_collision =
             RelaxedIKEnvCollision::init_collision_world(env_collision_file, &frames);
-        let objective_mode = get_objective_mode(fp2);
+        let objective_mode = get_objective_mode(settings_fp.clone());
         let planning_tsr = TSR::new_from_poses(
             &vec![0.0f64, 0.0, 0.0, 0.0, 0.0, 0.0],
             &vec![0.0f64, 0.0, 0.0, 0.0, 0.0, 0.0],

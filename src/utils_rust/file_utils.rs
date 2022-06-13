@@ -18,6 +18,7 @@ pub fn get_path_to_config() -> String {
     path_to_src    
 }
 
+
 pub fn get_file_contents(fp: String) -> String {
     let mut file = File::open(fp.as_str()).unwrap();
     let mut contents = String::new();
