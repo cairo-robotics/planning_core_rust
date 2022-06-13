@@ -31,18 +31,19 @@ pub struct RelaxedIK {
     pub vars: AgentVars,
     pub om: ObjectiveMaster,
     pub groove: OptimizationEngineOpen,
-    pub groove_nlopt: OptimizationEngineNLopt
+    pub groove_nlopt: OptimizationEngineNLopt,
 }
 
 impl RelaxedIK {
     pub fn from_info_file_name(info_file_name: String, mode: usize) -> Self {
         let path_to_src = get_path_to_config();
         let fp = path_to_src + "/info_files/" + info_file_name.as_str();
-        RelaxedIK::from_yaml_path(fp.clone(), mode.clone())
+        RelaxedIK::from_yaml_path(fp.clone(), mode.clone(), true, true)
     }
 
-    pub fn from_yaml_path(fp: String, mode: usize) -> Self {
-        let vars = AgentVars::from_yaml_path(fp.clone(), false, false);
+    pub fn from_yaml_path(fp: String, mode: usize, position_mode_relative: bool, rotation_mode_relative: bool) -> Self {
+        println!("{}", fp.clone());
+        let vars = AgentVars::from_yaml_path(fp.clone(), position_mode_relative, rotation_mode_relative);
         let mut om = ObjectiveMaster::relaxed_ik(vars.robot.num_chains, vars.objective_mode.clone());
         if mode == 0 {
             om = ObjectiveMaster::standard_ik(vars.robot.num_chains);
@@ -75,15 +76,14 @@ impl RelaxedIK {
                 self.vars.goal_quats[i] = ee_sub.quat_goals[i].clone();
             }
         }
-
         let in_collision = self.vars.update_collision_world();
         if !in_collision {
             if self.vars.objective_mode == "ECAA" {
                 self.om.tune_weight_priors(&self.vars);
             }
             self.groove.optimize(&mut out_x, &self.vars, &self.om, 100);
-            self.vars.update(out_x.clone());  
-        }  
+        }
+        self.vars.update(out_x.clone());   
         out_x
     }
 
