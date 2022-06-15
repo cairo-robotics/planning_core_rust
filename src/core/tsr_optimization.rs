@@ -26,7 +26,6 @@ impl TSROptimization {
     }
 
     pub fn from_yaml_path(fp: String, mode: usize, position_mode_relative: bool, rotation_mode_relative: bool) -> Self {
-        println!("{}", fp.clone());
         let vars = AgentVars::from_yaml_path(fp.clone(), position_mode_relative, rotation_mode_relative);
         let mut om = ObjectiveMaster::tsr_collision_ik(vars.robot.num_chains, vars.objective_mode.clone());
         if mode == 0 {
