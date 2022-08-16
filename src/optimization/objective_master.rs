@@ -54,7 +54,7 @@ impl ObjectiveMaster {
         let mut weight_priors: Vec<f64> = Vec::new();
         for i in 0..num_chains {
             objectives.push(Box::new(MatchEEPosGoals::new(i)));
-            weight_priors.push(1.0);
+            weight_priors.push(5.0);
             objectives.push(Box::new(MatchEEQuatGoals::new(i)));
             if objective_mode == "ECA3" {
                 weight_priors.push(0.0);
