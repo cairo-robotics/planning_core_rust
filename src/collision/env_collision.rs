@@ -1,6 +1,6 @@
 use crate::utils_rust::yaml_utils::EnvCollisionFileParser;
 use nalgebra::{Vector3, Isometry3, Point3};
-use nalgebra::geometry::{Translation3, UnitQuaternion, Quaternion};
+use nalgebra::geometry::{Translation3, UnitQuaternion};
 use ncollide3d::pipeline::{*};
 use ncollide3d::shape::{*};
 use std::collections::BTreeMap;

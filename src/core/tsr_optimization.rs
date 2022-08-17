@@ -66,8 +66,8 @@ impl TSROptimization {
                 self.om.tune_weight_priors(&self.vars);
             }
             self.groove.optimize(&mut out_x, &self.vars, &self.om, 100);
-            self.vars.update(out_x.clone());  
-        }  
+        }
+        self.vars.update(out_x.clone());  
         out_x
     }
 
