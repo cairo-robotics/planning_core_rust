@@ -65,7 +65,8 @@ impl Agent {
     }
 
     fn forward_kinematics(&mut self, j_config: Vec<f64>) -> PyResult<Vec<Vec<f64>>> {
-        self.agent_vars.update(j_config.clone());
+        // self.agent_vars.update(j_config.clone());
+        // println!("{:?}", j_config);
         let frames = self
             .agent_vars
             .robot
@@ -205,13 +206,13 @@ impl Agent {
             .lock()
             .unwrap()
             .vars
-            .update(config_vec.clone());
+            .update_keyframe_mean(config_vec.clone());
         self.omega_opt
             .lock()
             .unwrap()
             .vars
-            .update(config_vec.clone());
-        self.tsr_opt.lock().unwrap().vars.update(config_vec.clone());
+            .update_keyframe_mean(config_vec.clone());
+        self.tsr_opt.lock().unwrap().vars.update_keyframe_mean(config_vec.clone());
         Ok(())
     }
 
@@ -223,14 +224,10 @@ impl Agent {
         Ok(())
     }
 
-    fn omega_optimize(&mut self, keyframe_mean_config: Vec<f64>) -> PyResult<Opt> {
-        // let _ = self.update_xopt(best_guess);
-        let _ = self.update_keyframe_mean(keyframe_mean_config);
-
-        // let arc = Arc::new(Mutex::new(EEPoseGoalsSubscriber::new()));
-
+    fn omega_optimize(&mut self) -> PyResult<Opt> {
         let ja = self.omega_opt.lock().unwrap().solve();
         let len = ja.len();
+        let _ = self.update_xopt(ja.clone()); // Called so all vars objects get the updated current x_opt
         Ok(Opt {
             data: ja,
             length: len,
@@ -248,6 +245,7 @@ impl Agent {
 
         let ja = self.tsr_opt.lock().unwrap().solve(&g).clone();
         let len = ja.len();
+        let _ = self.update_xopt(ja.clone()); // Called so all vars objects get the updated current x_opt
         Ok(Opt {
             data: ja,
             length: len,
@@ -269,7 +267,7 @@ impl Agent {
 
         let ja = self.tsr_opt.lock().unwrap().solve(&g).clone();
         let len = ja.len();
-
+        let _ = self.update_xopt(ja.clone()); // Called so all vars objects get the updated current x_opt
         Ok(Opt {
             data: ja,
             length: len,

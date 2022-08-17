@@ -1,21 +1,21 @@
-use nalgebra::geometry::Isometry3;
-use nalgebra::Vector3;
+use nalgebra::geometry::IsometryMatrix3;
+use nalgebra::geometry::{Rotation3, Translation3};
 use std::f32::consts::PI;
 
 pub struct TSR {
-    pub T0_w:  Isometry3<f64>,
-    pub Tw_e:  Isometry3<f64>,
+    pub T0_w:  IsometryMatrix3<f64>,
+    pub Tw_e:  IsometryMatrix3<f64>,
     pub Bw:  Vec<Vec<f64>>
 }
 
 impl TSR {
     pub fn new_from_poses(T0_w: &Vec<f64>, Tw_e: &Vec<f64>, Bw: &Vec<Vec<f64>>) -> Self {
-        let T0_w_translation = Vector3::new(T0_w[0], T0_w[1], T0_w[2]);
-        let T0_w_axisangle = Vector3::new(T0_w[3], T0_w[4], T0_w[5]);
-        let Tw_e_translation = Vector3::new(Tw_e[0], Tw_e[1], Tw_e[2]);
-        let Tw_e_axisangle = Vector3::new(Tw_e[3], Tw_e[4], Tw_e[5]);
-        let T0_w_iso = Isometry3::new(T0_w_translation, T0_w_axisangle);
-        let Tw_e_iso = Isometry3::new(Tw_e_translation, Tw_e_axisangle);
+        let T0_w_translation = Translation3::new(T0_w[0], T0_w[1], T0_w[2]);
+        let T0_w_rotation = Rotation3::from_euler_angles(T0_w[3], T0_w[4], T0_w[5]);
+        let Tw_e_translation = Translation3::new(Tw_e[0], Tw_e[1], Tw_e[2]);
+        let Tw_e_rotation = Rotation3::from_euler_angles(Tw_e[3], Tw_e[4], Tw_e[5]);
+        let T0_w_iso = IsometryMatrix3::from_parts(T0_w_translation, T0_w_rotation);
+        let Tw_e_iso = IsometryMatrix3::from_parts(Tw_e_translation, Tw_e_rotation);
 
         TSR {
             T0_w: T0_w_iso,
@@ -25,7 +25,7 @@ impl TSR {
     }
 }
 
-pub fn distance_to_TSR(T0_s: &Isometry3<f64>, tsr: &TSR) -> (f64, Vec<f64>) {
+pub fn distance_to_TSR(T0_s: &IsometryMatrix3<f64>, tsr: &TSR) -> (f64, Vec<f64>) {
     // pose of the grasp location or the pose of the object held by the hand in world coordinates
     let T0_sp = T0_s * tsr.Tw_e.inverse();
     // T0_sp in terms of the coordinates of the target frame w given by the Task Space Region tsr.
@@ -55,15 +55,15 @@ pub fn distance_to_TSR(T0_s: &Isometry3<f64>, tsr: &TSR) -> (f64, Vec<f64>) {
     return (min_dist, delta_x_values)
 } 
 
-pub fn displacement(T0_s: &Isometry3<f64>) -> Vec<f64>{
+pub fn displacement(trasnform: &IsometryMatrix3<f64>) -> Vec<f64>{
    
     // Tv = [-Tm[0:3, 3][2], -Tm[0:3, 3][0], -Tm[0:3, 3][1]]
     let mut displacements = Vec::new();
-    displacements.push(T0_s.translation.vector[0]);
-    displacements.push(T0_s.translation.vector[1]);    
-    displacements.push(T0_s.translation.vector[2]);
-    let quat = T0_s.rotation;
-    let euler = quat.euler_angles();
+    displacements.push(trasnform.translation.vector[0]);
+    displacements.push(trasnform.translation.vector[1]);    
+    displacements.push(trasnform.translation.vector[2]);
+    let rot = trasnform.rotation;
+    let euler = rot.euler_angles();
     displacements.push(euler.0);
     displacements.push(euler.1);
     displacements.push(euler.2);
