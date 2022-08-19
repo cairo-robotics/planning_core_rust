@@ -47,7 +47,7 @@ impl OmegaOptimization {
             // if self.vars.objective_mode == "ECAA" {
             //     self.om.tune_weight_priors(&self.vars);
             // }
-            self.groove.optimize(&mut out_x, &self.vars, &self.om, 100);
+            self.groove.optimize(&mut out_x, &self.vars, &self.om, 1000);
         } else {
             println!("In collision, cannot optimize...")
         }

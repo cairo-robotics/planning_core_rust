@@ -286,6 +286,7 @@ impl MinimizeDistanceKeyframeMeanPosition {
 }
 impl ObjectiveTrait for MinimizeDistanceKeyframeMeanPosition {
     fn call(&self, x: &[f64], v: &vars::AgentVars, frames: &Vec<(Vec<nalgebra::Vector3<f64>>, Vec<nalgebra::UnitQuaternion<f64>>)>) -> f64 {
+        println!("Current config: {:?}", x);
         let last_pos_elem = frames[self.arm_idx].0.len() - 1;
         let pos = vec![frames[self.arm_idx].0[last_pos_elem].x, frames[self.arm_idx].0[last_pos_elem].y, frames[self.arm_idx].0[last_pos_elem].z];
         println!("Cur position: {:?}", pos);
@@ -303,6 +304,7 @@ impl ObjectiveTrait for MinimizeDistanceKeyframeMeanPosition {
     }
 
     fn call_lite(&self, x: &[f64], v: &vars::AgentVars, ee_poses: &Vec<(nalgebra::Vector3<f64>, nalgebra::UnitQuaternion<f64>)>) -> f64 {
+        println!("Current config: {:?}", x);
         let pos = vec![ee_poses[self.arm_idx].0.x, ee_poses[self.arm_idx].0.y, ee_poses[self.arm_idx].0.z];
         let keyframe_mean_position = v.keyframe_mean_pose[0].clone();
         let mut sum: f64 = 0.0;
