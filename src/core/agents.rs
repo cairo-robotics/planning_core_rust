@@ -201,18 +201,22 @@ impl Agent {
     }
 
     fn update_keyframe_mean(&mut self, config_vec: Vec<f64>) -> PyResult<()> {
-        self.agent_vars.keyframe_mean = config_vec.clone();
+        let mean_config = config_vec.clone();
+        let fk_results = self.forward_kinematics(mean_config).unwrap();
+    
+        self.agent_vars.keyframe_mean_pose = fk_results.clone();
+
         self.relaxed_ik
             .lock()
             .unwrap()
             .vars
-            .update_keyframe_mean(config_vec.clone());
+            .update_keyframe_mean_pose(fk_results.clone());
         self.omega_opt
             .lock()
             .unwrap()
             .vars
-            .update_keyframe_mean(config_vec.clone());
-        self.tsr_opt.lock().unwrap().vars.update_keyframe_mean(config_vec.clone());
+            .update_keyframe_mean_pose(fk_results.clone());
+        self.tsr_opt.lock().unwrap().vars.update_keyframe_mean_pose(fk_results.clone());
         Ok(())
     }
 
@@ -351,7 +355,7 @@ fn init_agent_vars(
         collision_nn,
         env_collision,
         objective_mode,
-        keyframe_mean: ifp.starting_config.clone(),
+        keyframe_mean_pose: vec![vec![1., 1., 1.], vec![0., 0., 0., 1.]],
         planning_tsr: planning_tsr,
         secondary_tsr: secondary_tsr,
     };

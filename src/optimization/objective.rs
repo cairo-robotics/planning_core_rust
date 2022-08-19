@@ -4,7 +4,7 @@ use crate::utils_rust::transformations::{*};
 use crate::optimization::loss::{groove_loss, groove_loss_derivative};
 use crate::optimization::tsr::{*};
 use nalgebra::geometry::{UnitQuaternion, Quaternion, IsometryMatrix3, Translation3, Rotation3};
-use nalgebra::{Point3, Vector3};
+use nalgebra::{Point3, Vector3, Normed};
 use ncollide3d::{shape, query};
 use std::ops::Deref;
 
@@ -278,25 +278,36 @@ impl ObjectiveTrait for MinimizeJerk {
         groove_loss(x_val, 0.0, 2, 0.1, 10.0, 2)
     }
 }
-
-pub struct MinimizeDistanceKeyframeMean;
-impl ObjectiveTrait for MinimizeDistanceKeyframeMean {
+pub struct MinimizeDistanceKeyframeMeanPosition{
+    pub arm_idx: usize
+}
+impl MinimizeDistanceKeyframeMeanPosition {
+    pub fn new(arm_idx: usize) -> Self {Self{arm_idx}}
+}
+impl ObjectiveTrait for MinimizeDistanceKeyframeMeanPosition {
     fn call(&self, x: &[f64], v: &vars::AgentVars, frames: &Vec<(Vec<nalgebra::Vector3<f64>>, Vec<nalgebra::UnitQuaternion<f64>>)>) -> f64 {
+        let last_pos_elem = frames[self.arm_idx].0.len() - 1;
+        let pos = vec![frames[self.arm_idx].0[last_pos_elem].x, frames[self.arm_idx].0[last_pos_elem].y, frames[self.arm_idx].0[last_pos_elem].z];
+        println!("Cur position: {:?}", pos);
+        let keyframe_mean_position = v.keyframe_mean_pose[0].clone();
+        println!("Keyframe mean position: {:?}", keyframe_mean_position);
         let mut sum: f64 = 0.0;
-        // println!("{:?}", v.keyframe_mean);
-        for i in 0..x.len() {
-            let diff = x[i] - v.keyframe_mean[i];
+        for i in 0..pos.len() {
+            let diff = pos[i] - keyframe_mean_position[i];
             sum += diff.powi(2);
         }
         let x_val = sum.sqrt();
+        println!("Keyframe Mean Pos x_val {}", x_val);
 
         groove_loss(x_val, 0.0, 2, 0.1, 10.0, 2)
     }
 
     fn call_lite(&self, x: &[f64], v: &vars::AgentVars, ee_poses: &Vec<(nalgebra::Vector3<f64>, nalgebra::UnitQuaternion<f64>)>) -> f64 {
+        let pos = vec![ee_poses[self.arm_idx].0.x, ee_poses[self.arm_idx].0.y, ee_poses[self.arm_idx].0.z];
+        let keyframe_mean_position = v.keyframe_mean_pose[0].clone();
         let mut sum: f64 = 0.0;
-        for i in 0..x.len() {
-            let diff = x[i] - v.keyframe_mean[i];
+        for i in 0..pos.len() {
+            let diff = pos[i] - keyframe_mean_position[i];
             sum += diff.powi(2);
         }
         let x_val = sum.sqrt();
@@ -304,8 +315,48 @@ impl ObjectiveTrait for MinimizeDistanceKeyframeMean {
     }
 }
 
-pub struct PlanningTSRError{
+pub struct MinimizeDistanceKeyframeMeanOrientation{
     pub arm_idx: usize
+}
+impl MinimizeDistanceKeyframeMeanOrientation {
+    pub fn new(arm_idx: usize) -> Self {Self{arm_idx}}
+}impl ObjectiveTrait for MinimizeDistanceKeyframeMeanOrientation {
+    fn call(&self, x: &[f64], v: &vars::AgentVars, frames: &Vec<(Vec<nalgebra::Vector3<f64>>, Vec<nalgebra::UnitQuaternion<f64>>)>) -> f64 {
+        println!("Frames {:?}", frames[self.arm_idx]);
+        let last_elem = frames[self.arm_idx].1.len() - 1;
+        let tmp = Quaternion::new(-frames[self.arm_idx].1[last_elem].w, -frames[self.arm_idx].1[last_elem].i, -frames[self.arm_idx].1[last_elem].j, -frames[self.arm_idx].1[last_elem].k);
+        let ee_quat2 = UnitQuaternion::from_quaternion(tmp);
+        println!("Current orientation: {:?}", tmp);
+
+        let keyframe_mean_orientation = v.keyframe_mean_pose[1].clone();
+        println!("Keyframe mean orientation: {:?}", keyframe_mean_orientation);
+        let target_quat =  Quaternion::new(keyframe_mean_orientation[3], keyframe_mean_orientation[0], keyframe_mean_orientation[1], keyframe_mean_orientation[2]);
+        let target_unit_quat = UnitQuaternion::from_quaternion(target_quat);
+        // Use the geodesic distance between two quaternions on the unit sphere
+        // https://link.springer.com/article/10.1007/s10851-009-0161-2 
+        let x_val = ((2.0 * ee_quat2.dot(&target_unit_quat).powf(2.0)) - 1.0).acos();
+        println!("Keyframe Mean Quat x_val {}", x_val);
+
+        groove_loss(x_val, 0.0, 2, 0.1, 10.0, 2)
+    }
+
+    fn call_lite(&self, x: &[f64], v: &vars::AgentVars, ee_poses: &Vec<(nalgebra::Vector3<f64>, nalgebra::UnitQuaternion<f64>)>) -> f64 {
+        let tmp = Quaternion::new(ee_poses[self.arm_idx].1.w, ee_poses[self.arm_idx].1.i, ee_poses[self.arm_idx].1.j, ee_poses[self.arm_idx].1.k);
+        let ee_quat2 = UnitQuaternion::from_quaternion(tmp);
+             
+        let keyframe_mean_orientation = v.keyframe_mean_pose[1].clone();
+        let target_quat =  Quaternion::new(keyframe_mean_orientation[3], keyframe_mean_orientation[0], keyframe_mean_orientation[1], keyframe_mean_orientation[2]);
+        let target_unit_quat = UnitQuaternion::from_quaternion(target_quat);
+        // Use the geodesic distance between two quaternions on the unit sphere
+        // https://link.springer.com/article/10.1007/s10851-009-0161-2 
+        let x_val = ((2.0 * ee_quat2.dot(&target_unit_quat).powf(2.0)) - 1.0).acos();
+
+        groove_loss(x_val, 0.0, 2, 0.1, 10.0, 2)
+    }
+}
+
+pub struct PlanningTSRError{
+    pub arm_idx: usize 
 }
 impl PlanningTSRError {
     pub fn new(arm_idx: usize) -> Self {Self{arm_idx}}
@@ -394,7 +445,8 @@ impl ObjectiveTrait for TSRPosGoal {
         let distance_and_delta = distance_to_TSR(&ts0_s_iso, &v.planning_tsr);
         let translation_deltas = &distance_and_delta.1[0..2];
         let x_val = l2_norm(translation_deltas);
-
+        
+        println!("TSR Pos x_val {}", x_val);
         groove_loss(x_val, 0., 2, 0.3, 10.0, 2)
     }
 
@@ -447,8 +499,8 @@ impl ObjectiveTrait for TSRQuatGoal {
         let distance_and_delta = distance_to_TSR(&ts0_s_iso, &v.planning_tsr);
         let rotation_deltas = &distance_and_delta.1[2..5];
         let x_val = l2_norm(rotation_deltas);
-    
-        groove_loss(x_val, 0., 2, 0.3, 10.0, 2)
+        println!("TSR Quat x_val {}", x_val);
+        groove_loss(x_val, 0., 2, 0.5, 10.0, 2)
     }
 
     fn call_lite(&self, _x: &[f64], v: &vars::AgentVars, ee_poses: &Vec<(nalgebra::Vector3<f64>, nalgebra::UnitQuaternion<f64>)>) -> f64 {
@@ -461,7 +513,7 @@ impl ObjectiveTrait for TSRQuatGoal {
         let rotation_deltas = &distance_and_delta.1[2..5];
         let x_val = l2_norm(rotation_deltas);
 
-        groove_loss(x_val, 0., 2, 0.3, 10.0, 2)
+        groove_loss(x_val, 0., 2, 0.5, 10.0, 2)
     }
 
     // fn call(&self, x: &[f64], v: &vars::AgentVars, frames: &Vec<(Vec<nalgebra::Vector3<f64>>, Vec<nalgebra::UnitQuaternion<f64>>)>) -> f64 {
