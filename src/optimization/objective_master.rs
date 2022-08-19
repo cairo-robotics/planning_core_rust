@@ -122,8 +122,8 @@ impl ObjectiveMaster {
         // weight_priors.push(1.0);
         objectives.push(Box::new(JointLimits));
         weight_priors.push(1.0);
-        objectives.push(Box::new(NNSelfCollision));
-        weight_priors.push(1.0);
+        // objectives.push(Box::new(NNSelfCollision));
+        // weight_priors.push(1.0);
         
         Self {
             objectives,
