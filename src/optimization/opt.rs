@@ -14,7 +14,7 @@ impl OptimizationEngineOpen {
         OptimizationEngineOpen { dim, cache }
     }
 
-    pub fn optimize(&mut self, x: &mut [f64], v: &AgentVars, om: &ObjectiveMaster, max_iter: usize) {
+    pub fn optimize(&mut self ,x : &mut [f64], v: &AgentVars, om: &ObjectiveMaster, max_iter: usize) {
         let df = |u: &[f64], grad: &mut [f64]| -> Result<(), SolverError> {
             let (my_obj, my_grad) = om.gradient(u, v);
             for i in 0..my_grad.len() {
@@ -24,6 +24,8 @@ impl OptimizationEngineOpen {
         };
 
         let f = |u: &[f64], c: &mut f64| -> Result<(), SolverError> {
+            println!("u in cost function: {:?}", u);
+            println!("c in cost function: {:?}", c);
             *c = om.call(u, v);
             Ok(())
         };
@@ -39,8 +41,8 @@ impl OptimizationEngineOpen {
         // Invoke the solver
         let status = panoc.solve(x);
 
-        // println!("Panoc status: {:#?}", status);
-        // println!("Panoc solution: {:#?}", x);
+        println!("Panoc status: {:#?}", status);
+        println!("Panoc solution: {:#?}", x);
     }
 }
 

@@ -286,7 +286,7 @@ impl MinimizeDistanceKeyframeMeanPosition {
 }
 impl ObjectiveTrait for MinimizeDistanceKeyframeMeanPosition {
     fn call(&self, x: &[f64], v: &vars::AgentVars, frames: &Vec<(Vec<nalgebra::Vector3<f64>>, Vec<nalgebra::UnitQuaternion<f64>>)>) -> f64 {
-        println!("Current config: {:?}", x);
+        println!("Current config in KFM position: {:?}", x);
         let last_pos_elem = frames[self.arm_idx].0.len() - 1;
         let pos = vec![frames[self.arm_idx].0[last_pos_elem].x, frames[self.arm_idx].0[last_pos_elem].y, frames[self.arm_idx].0[last_pos_elem].z];
         println!("Cur position: {:?}", pos);
@@ -304,7 +304,6 @@ impl ObjectiveTrait for MinimizeDistanceKeyframeMeanPosition {
     }
 
     fn call_lite(&self, x: &[f64], v: &vars::AgentVars, ee_poses: &Vec<(nalgebra::Vector3<f64>, nalgebra::UnitQuaternion<f64>)>) -> f64 {
-        println!("Current config: {:?}", x);
         let pos = vec![ee_poses[self.arm_idx].0.x, ee_poses[self.arm_idx].0.y, ee_poses[self.arm_idx].0.z];
         let keyframe_mean_position = v.keyframe_mean_pose[0].clone();
         let mut sum: f64 = 0.0;
@@ -324,23 +323,21 @@ impl MinimizeDistanceKeyframeMeanOrientation {
     pub fn new(arm_idx: usize) -> Self {Self{arm_idx}}
 }impl ObjectiveTrait for MinimizeDistanceKeyframeMeanOrientation {
     fn call(&self, x: &[f64], v: &vars::AgentVars, frames: &Vec<(Vec<nalgebra::Vector3<f64>>, Vec<nalgebra::UnitQuaternion<f64>>)>) -> f64 {
-        println!("Frames {:?}", frames[self.arm_idx]);
         let last_elem = frames[self.arm_idx].1.len() - 1;
         let tmp = Quaternion::new(-frames[self.arm_idx].1[last_elem].w, -frames[self.arm_idx].1[last_elem].i, -frames[self.arm_idx].1[last_elem].j, -frames[self.arm_idx].1[last_elem].k);
         let ee_quat2 = UnitQuaternion::from_quaternion(tmp);
-        println!("Current orientation: {:?}", tmp);
 
         let keyframe_mean_orientation = v.keyframe_mean_pose[1].clone();
-        println!("Keyframe mean orientation: {:?}", keyframe_mean_orientation);
         let target_quat =  Quaternion::new(keyframe_mean_orientation[3], keyframe_mean_orientation[0], keyframe_mean_orientation[1], keyframe_mean_orientation[2]);
         let target_unit_quat = UnitQuaternion::from_quaternion(target_quat);
-        // Use the geodesic distance between two quaternions on the unit sphere
-        // https://link.springer.com/article/10.1007/s10851-009-0161-2 
-        let x_val = ((2.0 * ee_quat2.dot(&target_unit_quat).powf(2.0)) - 1.0).acos();
-        println!("Keyframe Mean Quat x_val {}", x_val);
 
-        groove_loss(x_val, 0.0, 2, 0.1, 10.0, 2)
+        let disp = angle_between(target_unit_quat, frames[self.arm_idx].1[last_elem]);
+        let disp2 = angle_between(target_unit_quat, ee_quat2);
+        let x_val = disp.min(disp2);
+
+        groove_loss(x_val, 0., 2, 0.1, 10.0, 2)
     }
+
 
     fn call_lite(&self, x: &[f64], v: &vars::AgentVars, ee_poses: &Vec<(nalgebra::Vector3<f64>, nalgebra::UnitQuaternion<f64>)>) -> f64 {
         let tmp = Quaternion::new(ee_poses[self.arm_idx].1.w, ee_poses[self.arm_idx].1.i, ee_poses[self.arm_idx].1.j, ee_poses[self.arm_idx].1.k);
@@ -349,12 +346,15 @@ impl MinimizeDistanceKeyframeMeanOrientation {
         let keyframe_mean_orientation = v.keyframe_mean_pose[1].clone();
         let target_quat =  Quaternion::new(keyframe_mean_orientation[3], keyframe_mean_orientation[0], keyframe_mean_orientation[1], keyframe_mean_orientation[2]);
         let target_unit_quat = UnitQuaternion::from_quaternion(target_quat);
-        // Use the geodesic distance between two quaternions on the unit sphere
-        // https://link.springer.com/article/10.1007/s10851-009-0161-2 
-        let x_val = ((2.0 * ee_quat2.dot(&target_unit_quat).powf(2.0)) - 1.0).acos();
+        
+        let disp = angle_between(target_unit_quat, ee_poses[self.arm_idx].1);
+        let disp2 = angle_between(target_unit_quat, ee_quat2);
+        let x_val = disp.min(disp2);
 
-        groove_loss(x_val, 0.0, 2, 0.1, 10.0, 2)
+        groove_loss(x_val, 0., 2, 0.1, 10.0, 2)
     }
+
+    
 }
 
 pub struct PlanningTSRError{
