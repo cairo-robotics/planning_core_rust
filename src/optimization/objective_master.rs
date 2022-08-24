@@ -219,9 +219,6 @@ impl ObjectiveMaster {
     }
 
     pub fn call(&self, x: &[f64], vars: &AgentVars) -> f64 {
-        println!("---");
-        println!("---");
-        println!("Call x value in Objective Master: {:?}", x);
         if self.lite {
             self.__call_lite(x, vars)
         } else {

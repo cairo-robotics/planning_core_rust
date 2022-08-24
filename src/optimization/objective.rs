@@ -286,19 +286,15 @@ impl MinimizeDistanceKeyframeMeanPosition {
 }
 impl ObjectiveTrait for MinimizeDistanceKeyframeMeanPosition {
     fn call(&self, x: &[f64], v: &vars::AgentVars, frames: &Vec<(Vec<nalgebra::Vector3<f64>>, Vec<nalgebra::UnitQuaternion<f64>>)>) -> f64 {
-        println!("Current config in KFM position: {:?}", x);
         let last_pos_elem = frames[self.arm_idx].0.len() - 1;
         let pos = vec![frames[self.arm_idx].0[last_pos_elem].x, frames[self.arm_idx].0[last_pos_elem].y, frames[self.arm_idx].0[last_pos_elem].z];
-        println!("Cur position: {:?}", pos);
         let keyframe_mean_position = v.keyframe_mean_pose[0].clone();
-        println!("Keyframe mean position: {:?}", keyframe_mean_position);
         let mut sum: f64 = 0.0;
         for i in 0..pos.len() {
             let diff = pos[i] - keyframe_mean_position[i];
             sum += diff.powi(2);
         }
         let x_val = sum.sqrt();
-        println!("Keyframe Mean Pos x_val {}", x_val);
 
         groove_loss(x_val, 0.0, 2, 0.1, 10.0, 2)
     }
@@ -448,7 +444,6 @@ impl ObjectiveTrait for TSRPosGoal {
         let translation_deltas = &distance_and_delta.1[0..2];
         let x_val = l2_norm(translation_deltas);
         
-        println!("TSR Pos x_val {}", x_val);
         groove_loss(x_val, 0., 2, 0.3, 10.0, 2)
     }
 
@@ -501,7 +496,6 @@ impl ObjectiveTrait for TSRQuatGoal {
         let distance_and_delta = distance_to_TSR(&ts0_s_iso, &v.planning_tsr);
         let rotation_deltas = &distance_and_delta.1[2..5];
         let x_val = l2_norm(rotation_deltas);
-        println!("TSR Quat x_val {}", x_val);
         groove_loss(x_val, 0., 2, 0.5, 10.0, 2)
     }
 

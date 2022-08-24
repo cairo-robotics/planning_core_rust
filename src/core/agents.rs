@@ -203,7 +203,6 @@ impl Agent {
     fn update_keyframe_mean(&mut self, mean_config_vec: Vec<f64>) -> PyResult<()> {
         let mean_config = mean_config_vec.clone();
         let fk_pose = self.forward_kinematics(mean_config).unwrap();
-        println!("{:?}", fk_pose);
         self.agent_vars.update_keyframe_mean_pose(fk_pose.clone());
 
         self.relaxed_ik

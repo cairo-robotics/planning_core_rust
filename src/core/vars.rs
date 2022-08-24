@@ -118,7 +118,6 @@ impl AgentVars {
 
     pub fn update_keyframe_mean_pose(&mut self, mean_pose: Vec<Vec<f64>>) {
         self.keyframe_mean_pose = mean_pose.clone();
-        println!("Keyframe mean pose after update call in vars: {:?}",  self.keyframe_mean_pose);
     }
 
     pub fn update(&mut self, xopt: Vec<f64>) {
@@ -126,7 +125,6 @@ impl AgentVars {
         self.prev_state2 = self.prev_state.clone();
         self.prev_state = self.xopt.clone();
         self.xopt = xopt.clone();
-        println!("X-opt after update call in vars: {:?}", self.xopt);
     }
 
     pub fn update_collision_world(&mut self) -> bool {

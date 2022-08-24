@@ -24,8 +24,6 @@ impl OptimizationEngineOpen {
         };
 
         let f = |u: &[f64], c: &mut f64| -> Result<(), SolverError> {
-            println!("u in cost function: {:?}", u);
-            println!("c in cost function: {:?}", c);
             *c = om.call(u, v);
             Ok(())
         };
