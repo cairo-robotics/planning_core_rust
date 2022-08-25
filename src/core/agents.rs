@@ -241,16 +241,8 @@ impl Agent {
         })
     }
 
-    fn tsr_optimize(&mut self, pos_vec: Vec<f64>, quat_vec: Vec<f64>) -> PyResult<Opt> {
-        let arc = Arc::new(Mutex::new(EEPoseGoalsSubscriber::new()));
-        let mut g = arc.lock().unwrap();
-
-        g.pos_goals
-            .push(Vector3::new(pos_vec[0], pos_vec[1], pos_vec[2]));
-        let tmp_q = Quaternion::new(quat_vec[0], quat_vec[1], quat_vec[2], quat_vec[3]);
-        g.quat_goals.push(UnitQuaternion::from_quaternion(tmp_q));
-
-        let ja = self.tsr_opt.lock().unwrap().solve(&g).clone();
+    fn tsr_optimize(&mut self) -> PyResult<Opt> {
+        let ja = self.tsr_opt.lock().unwrap().solve().clone();
         let len = ja.len();
         let _ = self.update_xopt(ja.clone()); // Called so all vars objects get the updated current x_opt
         Ok(Opt {
@@ -261,18 +253,9 @@ impl Agent {
 
     fn tsr_collision_inverse_kinematics(
         &mut self,
-        pos_vec: Vec<f64>,
-        quat_vec: Vec<f64>,
     ) -> PyResult<Opt> {
-        let arc = Arc::new(Mutex::new(EEPoseGoalsSubscriber::new()));
-        let mut g = arc.lock().unwrap();
 
-        g.pos_goals
-            .push(Vector3::new(pos_vec[0], pos_vec[1], pos_vec[2]));
-        let tmp_q = Quaternion::new(quat_vec[0], quat_vec[1], quat_vec[2], quat_vec[3]);
-        g.quat_goals.push(UnitQuaternion::from_quaternion(tmp_q));
-
-        let ja = self.tsr_opt.lock().unwrap().solve(&g).clone();
+        let ja = self.tsr_opt.lock().unwrap().solve().clone();
         let len = ja.len();
         let _ = self.update_xopt(ja.clone()); // Called so all vars objects get the updated current x_opt
         Ok(Opt {

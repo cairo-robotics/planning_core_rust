@@ -39,8 +39,8 @@ impl OptimizationEngineOpen {
         // Invoke the solver
         let status = panoc.solve(x);
 
-        println!("Panoc status: {:#?}", status);
-        println!("Panoc solution: {:#?}", x);
+        // println!("Panoc status: {:#?}", status);
+        // println!("Panoc solution: {:#?}", x);
     }
 }
 
