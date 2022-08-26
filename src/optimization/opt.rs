@@ -14,7 +14,7 @@ impl OptimizationEngineOpen {
         OptimizationEngineOpen { dim, cache }
     }
 
-    pub fn optimize(&mut self, x: &mut [f64], v: &AgentVars, om: &ObjectiveMaster, max_iter: usize) {
+    pub fn optimize(&mut self ,x : &mut [f64], v: &AgentVars, om: &ObjectiveMaster, max_iter: usize) {
         let df = |u: &[f64], grad: &mut [f64]| -> Result<(), SolverError> {
             let (my_obj, my_grad) = om.gradient(u, v);
             for i in 0..my_grad.len() {

@@ -29,7 +29,7 @@ pub struct AgentVars {
     pub collision_nn: CollisionNN,
     pub env_collision: RelaxedIKEnvCollision,
     pub objective_mode: String,
-    pub keyframe_mean: Vec<f64>,
+    pub keyframe_mean_pose: Vec<Vec<f64>>,
     pub planning_tsr: TSR,
     pub secondary_tsr: TSR,
 }
@@ -110,14 +110,14 @@ impl AgentVars {
             collision_nn,
             env_collision,
             objective_mode,
-            keyframe_mean: ifp.starting_config.clone(),
+            keyframe_mean_pose: vec![vec![1.0, 1.0, 1.0], vec![0.0, 0.0, 0.0, 1.0]],
             planning_tsr: planning_tsr,
             secondary_tsr: secondary_tsr
         }
     }
 
-    pub fn update_keyframe_mean(&mut self, mean_configuration: Vec<f64>) {
-        self.keyframe_mean = mean_configuration.clone();
+    pub fn update_keyframe_mean_pose(&mut self, mean_pose: Vec<Vec<f64>>) {
+        self.keyframe_mean_pose = mean_pose.clone();
     }
 
     pub fn update(&mut self, xopt: Vec<f64>) {

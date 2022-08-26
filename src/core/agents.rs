@@ -200,19 +200,26 @@ impl Agent {
         Ok(())
     }
 
-    fn update_keyframe_mean(&mut self, config_vec: Vec<f64>) -> PyResult<()> {
-        self.agent_vars.keyframe_mean = config_vec.clone();
+    fn update_keyframe_mean(&mut self, mean_config_vec: Vec<f64>) -> PyResult<()> {
+        let mean_config = mean_config_vec.clone();
+        let fk_pose = self.forward_kinematics(mean_config).unwrap();
+        self.agent_vars.update_keyframe_mean_pose(fk_pose.clone());
+
         self.relaxed_ik
             .lock()
             .unwrap()
             .vars
-            .update_keyframe_mean(config_vec.clone());
+            .update_keyframe_mean_pose(fk_pose.clone());
         self.omega_opt
             .lock()
             .unwrap()
             .vars
-            .update_keyframe_mean(config_vec.clone());
-        self.tsr_opt.lock().unwrap().vars.update_keyframe_mean(config_vec.clone());
+            .update_keyframe_mean_pose(fk_pose.clone());
+        self.tsr_opt
+            .lock()
+            .unwrap()
+            .vars
+            .update_keyframe_mean_pose(fk_pose.clone());
         Ok(())
     }
 
@@ -234,16 +241,8 @@ impl Agent {
         })
     }
 
-    fn tsr_optimize(&mut self, pos_vec: Vec<f64>, quat_vec: Vec<f64>) -> PyResult<Opt> {
-        let arc = Arc::new(Mutex::new(EEPoseGoalsSubscriber::new()));
-        let mut g = arc.lock().unwrap();
-
-        g.pos_goals
-            .push(Vector3::new(pos_vec[0], pos_vec[1], pos_vec[2]));
-        let tmp_q = Quaternion::new(quat_vec[0], quat_vec[1], quat_vec[2], quat_vec[3]);
-        g.quat_goals.push(UnitQuaternion::from_quaternion(tmp_q));
-
-        let ja = self.tsr_opt.lock().unwrap().solve(&g).clone();
+    fn tsr_optimize(&mut self) -> PyResult<Opt> {
+        let ja = self.tsr_opt.lock().unwrap().solve().clone();
         let len = ja.len();
         let _ = self.update_xopt(ja.clone()); // Called so all vars objects get the updated current x_opt
         Ok(Opt {
@@ -254,18 +253,9 @@ impl Agent {
 
     fn tsr_collision_inverse_kinematics(
         &mut self,
-        pos_vec: Vec<f64>,
-        quat_vec: Vec<f64>,
     ) -> PyResult<Opt> {
-        let arc = Arc::new(Mutex::new(EEPoseGoalsSubscriber::new()));
-        let mut g = arc.lock().unwrap();
 
-        g.pos_goals
-            .push(Vector3::new(pos_vec[0], pos_vec[1], pos_vec[2]));
-        let tmp_q = Quaternion::new(quat_vec[0], quat_vec[1], quat_vec[2], quat_vec[3]);
-        g.quat_goals.push(UnitQuaternion::from_quaternion(tmp_q));
-
-        let ja = self.tsr_opt.lock().unwrap().solve(&g).clone();
+        let ja = self.tsr_opt.lock().unwrap().solve().clone();
         let len = ja.len();
         let _ = self.update_xopt(ja.clone()); // Called so all vars objects get the updated current x_opt
         Ok(Opt {
@@ -351,7 +341,7 @@ fn init_agent_vars(
         collision_nn,
         env_collision,
         objective_mode,
-        keyframe_mean: ifp.starting_config.clone(),
+        keyframe_mean_pose: vec![vec![1., 1., 1.], vec![0., 0., 0., 1.]],
         planning_tsr: planning_tsr,
         secondary_tsr: secondary_tsr,
     };
